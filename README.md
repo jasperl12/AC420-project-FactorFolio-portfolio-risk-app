@@ -1,6 +1,6 @@
 # FactorFolio
 A Streamlit app that helps beginners build stock portfolios that match their comfort with risk.
-Live app: (add your Streamlit link here)
+Live app: https://ac420-factorfolio-jasperlin.streamlit.app
 
 ## How to use
 1. Enter an amount, stocks and weights on the homepage.
