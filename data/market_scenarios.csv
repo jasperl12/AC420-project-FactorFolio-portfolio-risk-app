@@ -1,0 +1,9 @@
+name,value,description
+bear_market_return,0.0015499999999999993,"25th percentile of annual U.S. market returns 1927 to 2025, Ken French Data Library"
+median_market_return,0.1609,"Median of annual U.S. market returns 1927 to 2025, Ken French Data Library"
+bull_market_return,0.26839999999999997,"75th percentile of annual U.S. market returns 1927 to 2025, Ken French Data Library"
+mean_market_return,0.12193535353535354,"Average of annual U.S. market returns 1927 to 2025, Ken French Data Library"
+severe_bear_market_return,-0.11277999999999999,"10th percentile of annual U.S. market returns 1927 to 2025, Ken French Data Library"
+strong_bull_market_return,0.33524000000000004,"90th percentile of annual U.S. market returns 1927 to 2025, Ken French Data Library"
+avg_smb,0.0249929292929293,Average annual SMB 1927 to 2025
+avg_hml,0.042231313131313127,Average annual HML 1927 to 2025

@@ -1,0 +1,104 @@
+ticker,name,sector,industry
+AAPL,Apple Inc.,Technology,Consumer Electronics
+ABBV,AbbVie Inc.,Healthcare,Drug Manufacturers - General
+ABT,Abbott Laboratories,Healthcare,Medical Devices
+ACN,Accenture plc,Technology,Information Technology Services
+ADBE,Adobe Inc.,Technology,Software - Application
+AIG,"American International Group, Inc.",Financial Services,Insurance - Diversified
+AMD,"Advanced Micro Devices, Inc.",Technology,Semiconductors
+AMGN,Amgen Inc.,Healthcare,Drug Manufacturers - General
+AMT,American Tower Corporation,Real Estate,REIT - Specialty
+AMZN,"Amazon.com, Inc.",Consumer Cyclical,Internet Retail
+AVGO,Broadcom Inc.,Technology,Semiconductors
+AXP,American Express Company,Financial Services,Credit Services
+BA,The Boeing Company,Industrials,Aerospace & Defense
+BAC,Bank of America Corporation,Financial Services,Banks - Diversified
+BK,BK,N/A,N/A
+BKNG,Booking Holdings Inc.,Consumer Cyclical,Travel Services
+BLK,"BlackRock, Inc.",Financial Services,Asset Management
+BMY,Bristol-Myers Squibb Company,Healthcare,Drug Manufacturers - General
+BRK-B,Berkshire Hathaway Inc.,Financial Services,Insurance - Diversified
+C,Citigroup Inc.,Financial Services,Banks - Diversified
+CAT,Caterpillar Inc.,Industrials,Farm & Heavy Construction Machinery
+CHTR,"Charter Communications, Inc.",Communication Services,Telecom Services
+CL,Colgate-Palmolive Company,Consumer Defensive,Household & Personal Products
+CMCSA,Comcast Corporation,Communication Services,Telecom Services
+COF,Capital One Financial Corporation,Financial Services,Credit Services
+COP,ConocoPhillips,Energy,Oil & Gas E&P
+COST,Costco Wholesale Corporation,Consumer Defensive,Discount Stores
+CRM,"Salesforce, Inc.",Technology,Software - Application
+CSCO,"Cisco Systems, Inc.",Technology,Communication Equipment
+CVS,CVS Health Corporation,Healthcare,Healthcare Plans
+CVX,Chevron Corporation,Energy,Oil & Gas Integrated
+DE,Deere & Company,Industrials,Farm & Heavy Construction Machinery
+DHR,Danaher Corporation,Healthcare,Diagnostics & Research
+DIS,The Walt Disney Company,Communication Services,Entertainment
+DUK,Duke Energy Corporation,Utilities,Utilities - Regulated Electric
+EMR,Emerson Electric Co.,Industrials,Specialty Industrial Machinery
+F,Ford Motor Company,Consumer Cyclical,Auto Manufacturers
+FDX,FedEx Corporation,Industrials,Integrated Freight & Logistics
+GD,General Dynamics Corporation,Industrials,Aerospace & Defense
+GE,GE Aerospace,Industrials,Aerospace & Defense
+GILD,"Gilead Sciences, Inc.",Healthcare,Drug Manufacturers - General
+GM,General Motors Company,Consumer Cyclical,Auto Manufacturers
+GOOG,Alphabet Inc.,Communication Services,Internet Content & Information
+GOOGL,Alphabet Inc.,Communication Services,Internet Content & Information
+GS,"The Goldman Sachs Group, Inc.",Financial Services,Capital Markets
+HD,"The Home Depot, Inc.",Consumer Cyclical,Home Improvement Retail
+HON,Honeywell International Inc.,Industrials,Conglomerates
+IBM,International Business Machines Corporation,Technology,Information Technology Services
+INTC,Intel Corporation,Technology,Semiconductors
+INTU,Intuit Inc.,Technology,Software - Application
+ISRG,"Intuitive Surgical, Inc.",Healthcare,Medical Instruments & Supplies
+JNJ,Johnson & Johnson,Healthcare,Drug Manufacturers - General
+JPM,JPMorgan Chase & Co.,Financial Services,Banks - Diversified
+KO,The Coca-Cola Company,Consumer Defensive,Beverages - Non-Alcoholic
+LIN,Linde plc,Basic Materials,Specialty Chemicals
+LLY,Eli Lilly and Company,Healthcare,Drug Manufacturers - General
+LMT,Lockheed Martin Corporation,Industrials,Aerospace & Defense
+LOW,"Lowe's Companies, Inc.",Consumer Cyclical,Home Improvement Retail
+MA,Mastercard Incorporated,Financial Services,Credit Services
+MCD,McDonald's Corporation,Consumer Cyclical,Restaurants
+MDLZ,"Mondelez International, Inc.",Consumer Defensive,Confectioners
+MDT,Medtronic plc,Healthcare,Medical Devices
+MET,"MetLife, Inc.",Financial Services,Insurance - Life
+META,"Meta Platforms, Inc.",Communication Services,Internet Content & Information
+MMM,3M Company,Industrials,Conglomerates
+MO,"Altria Group, Inc.",Consumer Defensive,Tobacco
+MRK,"Merck & Co., Inc.",Healthcare,Drug Manufacturers - General
+MS,Morgan Stanley,Financial Services,Capital Markets
+MSFT,Microsoft Corporation,Technology,Software - Infrastructure
+NEE,"NextEra Energy, Inc.",Utilities,Utilities - Regulated Electric
+NFLX,"Netflix, Inc.",Communication Services,Entertainment
+NKE,"NIKE, Inc.",Consumer Cyclical,Footwear & Accessories
+NOW,"ServiceNow, Inc.",Technology,Software - Application
+NVDA,NVIDIA Corporation,Technology,Semiconductors
+ORCL,Oracle Corporation,Technology,Software - Infrastructure
+PEP,"PepsiCo, Inc.",Consumer Defensive,Beverages - Non-Alcoholic
+PFE,Pfizer Inc.,Healthcare,Drug Manufacturers - General
+PG,The Procter & Gamble Company,Consumer Defensive,Household & Personal Products
+PLTR,Palantir Technologies Inc.,Technology,Software - Infrastructure
+PM,Philip Morris International Inc.,Consumer Defensive,Tobacco
+PYPL,"PayPal Holdings, Inc.",Financial Services,Credit Services
+QCOM,QUALCOMM Incorporated,Technology,Semiconductors
+RTX,RTX Corporation,Industrials,Aerospace & Defense
+SBUX,Starbucks Corporation,Consumer Cyclical,Restaurants
+SCHW,The Charles Schwab Corporation,Financial Services,Capital Markets
+SO,The Southern Company,Utilities,Utilities - Regulated Electric
+SPG,"Simon Property Group, Inc.",Real Estate,REIT - Retail
+T,AT&T Inc.,Communication Services,Telecom Services
+TGT,Target Corporation,Consumer Defensive,Discount Stores
+TMO,Thermo Fisher Scientific Inc.,Healthcare,Diagnostics & Research
+TMUS,"T-Mobile US, Inc.",Communication Services,Telecom Services
+TSLA,"Tesla, Inc.",Consumer Cyclical,Auto Manufacturers
+TXN,Texas Instruments Incorporated,Technology,Semiconductors
+UBER,"Uber Technologies, Inc.",Technology,Software - Application
+UNH,UnitedHealth Group Incorporated,Healthcare,Healthcare Plans
+UNP,Union Pacific Corporation,Industrials,Railroads
+UPS,"United Parcel Service, Inc.",Industrials,Integrated Freight & Logistics
+USB,U.S. Bancorp,Financial Services,Banks - Regional
+V,Visa Inc.,Financial Services,Credit Services
+VZ,Verizon Communications Inc.,Communication Services,Telecom Services
+WFC,Wells Fargo & Company,Financial Services,Banks - Diversified
+WMT,Walmart Inc.,Consumer Defensive,Discount Stores
+XOM,ExxonMobil Holdings Corporation,Energy,Oil & Gas Integrated
