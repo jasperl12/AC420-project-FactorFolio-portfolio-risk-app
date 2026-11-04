@@ -5,4 +5,4 @@ import streamlit as st
 st.set_page_config(page_title="FactorFolio", layout="centered")
 st.title("FactorFolio")
 st.write("Build a stock portfolio that matches your comfort with risk.")
-st.info("Under construction: Step 0 of the build plan is done.")
+st.info("Under construction: Steps 0 to 2 are done. Open Data Check in the sidebar to see the data behind the sample portfolio.")
