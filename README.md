@@ -8,7 +8,7 @@ Live app: https://ac420-factorfolio-jasperlin.streamlit.app
 3. Use the sidebar pages for the math, valuations, stock ideas and data checks.
 
 ## Data
-- Yahoo Finance via yfinance: prices, analyst EPS forecasts, financial statements
+- Yahoo Finance via yfinance: prices, the 30-year Treasury yield (^TYX), analyst EPS forecasts, financial statements
 - Ken French Data Library: Fama-French factors
 - WRDS monthly stock returns (AC420 Lecture 17 class file): used offline only to
   estimate reference coefficients; no raw WRDS data is stored in this repo

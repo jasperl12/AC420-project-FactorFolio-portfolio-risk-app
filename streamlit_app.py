@@ -1,5 +1,6 @@
 # FactorFolio - AC420 project (Jasper Lin)
-# Homepage: the Portfolio Builder (Build Guide Step 4: inputs, risk score, allocation chart).
+# Homepage: the Portfolio Builder (Build Guide Steps 4 and 5: inputs, risk score,
+# bear/base/bull projections vs. SPY, allocation chart).
 # Layout follows the Lecture 14 streamlit_app.py from Assignment #4; st.navigation names the pages.
 import pandas as pd
 import plotly.express as px
@@ -7,7 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from core import data as fdata
-from core import models, scoring
+from core import models, projections, scoring
 
 st.set_page_config(page_title="FactorFolio", layout="centered")
 
@@ -43,6 +44,24 @@ def normalize_table():
     st.session_state.holdings = pd.DataFrame({"Ticker": list(weights), "Weight (%)": [round(w, 1) for w in weights.values()]})
     st.session_state.editor_base = st.session_state.holdings.copy()
     st.session_state.pop("holdings_editor", None)   # restart the table widget with the new numbers
+
+
+def signed_money(x):
+    return f"+${x:,.0f}" if x >= 0 else f"-${-x:,.0f}"
+
+
+def growth_chart(path):
+    """Line chart of dollar value by year, portfolio vs. SPY (Plotly Express, Lecture 5)."""
+    fig = px.line(path, x="Year", y=["Your portfolio", "SPY"], markers=True,
+                  color_discrete_map={"Your portfolio": "#2563eb", "SPY": "#9ca3af"})
+    fig.update_traces(hovertemplate="%{fullData.name}: $%{y:,.0f}<extra></extra>")
+    fig.update_traces(selector=dict(name="Your portfolio"), line_width=3)
+    fig.update_traces(selector=dict(name="SPY"), line_dash="dash")   # still visible when the lines overlap
+    fig.update_layout(height=320, margin=dict(l=10, r=10, t=30, b=10), hovermode="x unified",
+                      yaxis_title="Value ($)", yaxis_tickprefix="$", yaxis_tickformat=",.0f",
+                      legend_title_text="", legend=dict(orientation="h", x=0, y=1.12))
+    fig.update_xaxes(dtick=1)
+    return fig
 
 
 def gauge(score, spy_score):
@@ -122,7 +141,7 @@ def portfolio_builder():
     spy = scoring.risk_score(result["benchmark"]) if result["benchmark"] else None
     words = scoring.explain(port, scored)
     fit = scoring.comfort_fit(scored["score"], comfort)
-    st.session_state.analysis = {"score": scored["score"], "band": scored["band"]}
+    st.session_state.analysis = {"score": scored["score"], "band": scored["band"], "beta": port["beta"]}
 
     # ---------- Risk score card ----------
     st.subheader("Risk score")
@@ -152,6 +171,45 @@ def portfolio_builder():
         st.caption("Financial health (Altman Z-score, Lecture 10) joins the score in Step 7; until then "
                    "the other weights are rescaled to add to 100%.")
 
+    # ---------- Bear, base and bull projections ----------
+    st.subheader("Bear, base and bull projections")
+    scenario = st.radio("Market scenario for the next year", projections.SCENARIOS, horizontal=True,
+                        index=projections.SCENARIOS.index(remember("scenario", "Base")), key="scenario")
+    st.session_state.saved_scenario = scenario
+    st.caption(projections.SCENARIO_HELP[scenario])
+    rf = projections.risk_free_rate()
+    if not rf["ok"]:
+        st.warning(rf["note"])
+    proj = projections.project(amount, horizon, port["beta"], rf["rf"], scenario)
+    st.plotly_chart(growth_chart(proj["path"]), width="stretch", config={"displayModeBar": False})
+    m1, m2, m3 = st.columns(3)
+    m1.metric(f"Your portfolio in {horizon} yr", f"${proj['portfolio_value']:,.0f}",
+              f"{proj['portfolio_value'] / amount - 1:+.1%}")
+    m2.metric(f"SPY in {horizon} yr", f"${proj['spy_value']:,.0f}", f"{proj['spy_value'] / amount - 1:+.1%}")
+    if abs(proj["difference_pct"]) < 0.0005:   # under 0.05%: call it a tie instead of showing -0.0%
+        m3.metric("Difference", signed_money(proj["difference"]), "about the same as SPY", delta_color="off",
+                  delta_arrow="off")
+    else:
+        m3.metric("Difference", signed_money(proj["difference"]), f"{proj['difference_pct']:+.1%} vs. SPY")
+    st.markdown(projections.explain(proj).replace("$", "\\$"))   # \$ stops Streamlit reading $...$ as math
+    st.session_state.analysis.update({"scenario": scenario, "rf": rf["rf"]})
+
+    if abs(port["beta"] - 1) < 0.1:
+        move_word = "about as much as"
+    else:
+        move_word = "more than" if port["beta"] > 1 else "less than"
+    with st.expander("How these projections work"):
+        st.write(f"Each scenario sets the stock market's return for the next year. Your portfolio's return comes "
+                 f"from the CAPM: risk-free rate + beta × (market return - risk-free rate). With a beta of "
+                 f"{port['beta']:.2f}, your portfolio tends to move {move_word} the market. "
+                 "SPY's return is the market return itself.")
+        st.write("After the first year, both go back to the base return for the rest of the time horizon. "
+                 "Past alpha is left out because it may not repeat (Lecture 12).")
+        st.dataframe(projections.assumptions_table(proj), hide_index=True, width="stretch")
+        st.caption(f"Risk-free rate: {rf['note']} Equity risk premium: {projections.ERP:.1%} (Lecture 15). "
+                   "Bear and bull: the 25th and 75th percentiles of annual U.S. market returns from 1927 to 2025 "
+                   "(Ken French Data Library). These are scenarios, not predictions.")
+
     # ---------- Allocation ----------
     st.subheader("Allocation")
     sectors = sector_lookup()
@@ -172,11 +230,11 @@ def portfolio_builder():
     if dropped:
         st.caption("Left out because there was not enough data: " + ", ".join(dropped))
 
-    st.info(f"Bear, base and bull projections of your ${amount:,.0f} over {horizon} years vs. SPY: coming in Step 5.")
     st.page_link("pages/4_Data_Check.py", label="Look at the data behind this score", icon="🔍")
+    rf_date = f" on {rf['as_of']}" if rf["as_of"] else ""
     st.caption(f"For education only, not investment advice. Prices from Yahoo Finance through "
                f"{ds['as_of']['prices']}; Fama-French factors from Ken French's Data Library through "
-               f"{ds['as_of']['factors']}.")
+               f"{ds['as_of']['factors']}; risk-free rate {rf['rf']:.2%}{rf_date}.")
 
 
 pages = [
