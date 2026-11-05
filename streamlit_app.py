@@ -1,6 +1,6 @@
 # FactorFolio - AC420 project (Jasper Lin)
-# Homepage: the Portfolio Builder (Build Guide Steps 4 and 5: inputs, risk score,
-# bear/base/bull projections vs. SPY, allocation chart).
+# Homepage: the Portfolio Builder (Build Guide Steps 4 to 6: inputs, risk score,
+# bear/base/bull projections vs. SPY, allocation chart, fair-value card).
 # Layout follows the Lecture 14 streamlit_app.py from Assignment #4; st.navigation names the pages.
 import pandas as pd
 import plotly.express as px
@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from core import data as fdata
-from core import models, projections, scoring
+from core import models, projections, scoring, valuation
 
 st.set_page_config(page_title="FactorFolio", layout="centered")
 
@@ -230,6 +230,28 @@ def portfolio_builder():
     if dropped:
         st.caption("Left out because there was not enough data: " + ", ".join(dropped))
 
+    # ---------- Fair value (Lectures 15 and 16) ----------
+    st.subheader("Fair value check")
+    with st.spinner("Looking up analyst EPS forecasts for your stocks and similar companies..."):
+        val = valuation.value_portfolio(result["stocks"], result["weights"], rf["rf"], scenario)
+    if val["error"]:
+        st.warning(val["error"] + " The fair-value check will come back when Yahoo Finance responds.")
+    else:
+        fv = val["table"]
+        st.info(valuation.explain(val["portfolio"], fv).replace("$", "\\$"))
+        card = pd.DataFrame({
+            "Stock": fv.index,
+            "Price": [f"${p:,.2f}" if pd.notna(p) else "n/a" for p in fv["price"]],
+            "Fair-value range": [f"${lo:,.0f} to ${hi:,.0f}" if pd.notna(lo) else "n/a"
+                                 for lo, hi in zip(fv["low"], fv["high"])],
+            "Label": fv["label"].values,
+        })
+        st.dataframe(card, hide_index=True, width="stretch")
+        st.caption(f"Each range runs from the DCF value ({scenario.lower()} case, long-term growth "
+                   f"{val['g_lt'][scenario]:.0%}; Lecture 15) to the peer comparables value (median P/E of similar "
+                   f"S&P 100 stocks × next-year EPS; Lecture 16). Prices as of {val['prices_as_of']}.")
+    st.page_link("pages/2_Projections_and_Valuation.py", label="See the DCF, peer comparables and what-if controls",
+                 icon="📈")
     st.page_link("pages/4_Data_Check.py", label="Look at the data behind this score", icon="🔍")
     rf_date = f" on {rf['as_of']}" if rf["as_of"] else ""
     st.caption(f"For education only, not investment advice. Prices from Yahoo Finance through "

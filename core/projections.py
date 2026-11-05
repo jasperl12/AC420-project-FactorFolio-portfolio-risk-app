@@ -90,15 +90,23 @@ def growth_path(amount, first_year_return, later_return, years):
     return values
 
 
-def project(amount, years, beta, rf, scenario, erp=ERP, every_year=False, scenarios=None):
+def ff3_extra(s, h, scenarios=None):
+    """Fama-French add-on to the yearly return: s x average SMB + h x average HML (outline 5.5)."""
+    sc = load_scenarios() if scenarios is None else scenarios
+    return s * sc["avg_smb"] + h * sc["avg_hml"]
+
+
+def project(amount, years, beta, rf, scenario, erp=ERP, every_year=False, scenarios=None, extra=0.0):
     """Portfolio vs. SPY for one scenario.
 
     every_year=False: scenario return in year 1, then the base return (the outline's default).
     every_year=True: the scenario return in every year.
+    extra: a yearly return added to the portfolio only (the FF3 size and value add-on, or
+    historical alpha x 12 when the user turns it on). 0 on the homepage.
     """
     market = market_returns(rf, erp, scenarios)
-    port_first = expected_return(beta, market[scenario], rf)
-    port_later = port_first if every_year else expected_return(beta, market["Base"], rf)
+    port_first = expected_return(beta, market[scenario], rf) + extra
+    port_later = port_first if every_year else expected_return(beta, market["Base"], rf) + extra
     spy_first = market[scenario]
     spy_later = spy_first if every_year else market["Base"]
 
@@ -110,7 +118,7 @@ def project(amount, years, beta, rf, scenario, erp=ERP, every_year=False, scenar
     final = path.iloc[-1]
     return {
         "scenario": scenario, "amount": amount, "years": years, "beta": beta, "rf": rf, "erp": erp,
-        "market": market, "every_year": every_year,
+        "market": market, "every_year": every_year, "extra": extra,
         "portfolio_return_first": port_first, "portfolio_return_later": port_later,
         "spy_return_first": spy_first, "spy_return_later": spy_later,
         "path": path,
@@ -128,7 +136,7 @@ def assumptions_table(proj):
     for name in SCENARIOS:
         m = proj["market"][name]
         rows.append({"Scenario": name, "Market return": f"{m:.1%}",
-                     "Your portfolio": f"{expected_return(proj['beta'], m, proj['rf']):.1%}",
+                     "Your portfolio": f"{expected_return(proj['beta'], m, proj['rf']) + proj['extra']:.1%}",
                      "SPY": f"{m:.1%}"})
     return pd.DataFrame(rows)
 
