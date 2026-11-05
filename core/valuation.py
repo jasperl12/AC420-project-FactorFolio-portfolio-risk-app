@@ -15,14 +15,12 @@ peers use the median P/E (one outlier peer flipped the AMZN call); every P/E is 
 EPS for the stock and its peers alike; and eps1 is always defined before it is used.
 Labels say "looks underpriced / fairly priced / overpriced", never BUY or SELL.
 """
-import logging
-import re
-import time
 from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
 
+from core import yahoo
 from core.projections import ERP
 
 try:
@@ -40,10 +38,6 @@ MAX_PEERS = 6        # keeps the number of Yahoo requests small
 HIGH_GROWTH = 0.25   # check 18: short-term growth above 25% is flagged (first guess)
 BETA_GAP = 0.5       # check 13: our beta vs. Yahoo's beta
 SENSITIVE_GAP = 0.02 # cost of equity within 2 points of long-term growth: the value is very sensitive
-SNAPSHOT_FILE = DATA_DIR / "eps_snapshot.csv"   # backup made in Colab by notebooks/eps_snapshot.ipynb
-LIVE_PAUSE = 0.25    # seconds between Yahoo requests, like the Step 1 Colab cell
-RETRY_AFTER = 600    # after Yahoo refuses, wait 10 minutes before asking it again
-STOP_AFTER = 3       # three refusals in a row: stop asking Yahoo for now and use the snapshot
 
 
 # ---------- The class formulas ----------
@@ -140,142 +134,9 @@ def pick_peers(ticker, industry, sector, beta, universe=None, max_peers=MAX_PEER
 
 
 # ---------- Yahoo Finance downloads ----------
-# Analyst forecasts (eps_trend) and company info come from a part of Yahoo that needs a session
-# token, and Yahoo often refuses it to shared cloud servers like Streamlit Cloud's. yfinance hides
-# that refusal: it logs the error and returns an empty table. So this code:
-#   1. treats an empty answer as a failed download (it raises, so st.cache_data never caches it),
-#   2. keeps the error yfinance logged, to show the user what Yahoo said,
-#   3. pauses between requests, retries once, and stops asking for 10 minutes after 3 refusals,
-#   4. falls back to data/eps_snapshot.csv, a backup saved in Colab, with its date shown.
-# Successful answers are cached for a day; prices use a different part of Yahoo and are not affected.
-
-class _YahooMessages(logging.Handler):
-    """Keeps the most recent warning or error that yfinance logged."""
-    def __init__(self):
-        super().__init__(level=logging.WARNING)
-        self.last = None
-
-    def emit(self, record):
-        self.last = record.getMessage()[:300]
-
-
-_yf_logger = logging.getLogger("yfinance")
-_messages = next((h for h in _yf_logger.handlers if type(h).__name__ == "_YahooMessages"), None)
-if _messages is None:          # add it once, even when Streamlit reloads this file
-    _messages = _YahooMessages()
-    _yf_logger.addHandler(_messages)
-
-# Shared by every visitor of the app (like st.cache_data)
-_status = {"blocked_until": 0.0, "message": None}
-_live_ok = {}     # key -> time a live answer was saved in the one-day cache
-_failed_at = {}   # key -> time Yahoo last refused it
-
-
-def _can_ask_yahoo(key):
-    """False while Yahoo is refusing us, unless the answer is already in the cache (no new request)."""
-    now = time.time()
-    if now - _live_ok.get(key, -1e12) < 86400:
-        return True
-    if now < _status["blocked_until"]:
-        return False
-    return now - _failed_at.get(key, -1e12) > RETRY_AFTER
-
-
-def _record(key, ok, message=None):
-    if ok:
-        _live_ok.setdefault(key, time.time())
-    else:
-        _failed_at[key] = time.time()
-        _status["message"] = message
-
-
-def yahoo_status():
-    """What Yahoo said the last time it refused a request, and whether we are waiting before asking again."""
-    return {"blocked": time.time() < _status["blocked_until"], "message": _status["message"]}
-
-
-@cache_data
-def _eps_trend(ticker):
-    """Live analyst EPS table. Raises when Yahoo sends nothing, so a failure is never cached."""
-    _messages.last = None
-    for attempt in range(2):                      # one retry after a short wait
-        time.sleep(LIVE_PAUSE if attempt == 0 else 1.0)
-        eps = yf.Ticker(ticker).eps_trend
-        if eps is not None and not eps.empty and "0y" in eps.index and "+1y" in eps.index:
-            return eps
-    raise LookupError(_messages.last or "Yahoo Finance sent no analyst EPS table")
-
-
-@cache_data
-def load_snapshot():
-    """Backup analyst forecasts saved in Colab (notebooks/eps_snapshot.ipynb), one row per ticker."""
-    cols = ["ticker", "name", "sector", "industry", "eps_0y", "eps_1y", "yahoo_beta", "forward_pe", "as_of"]
-    if not SNAPSHOT_FILE.exists():
-        return pd.DataFrame(columns=cols).set_index("ticker")
-    return pd.read_csv(SNAPSHOT_FILE).drop_duplicates("ticker").set_index("ticker")
-
-
-def snapshot_date():
-    snap = load_snapshot()
-    return None if snap.empty else str(snap["as_of"].max())
-
-
-def eps_forecasts(ticker, allow_live=True):
-    """Analyst EPS for one ticker: live from Yahoo, else from the snapshot, else missing.
-
-    Returns a dict with eps1 ('0y'), eps2 ('+1y'), table (the full live eps_trend, or None),
-    source ('live', 'snapshot' or None) and error (what went wrong with the live request, if anything).
-    """
-    error = None
-    key = f"eps:{ticker}"
-    if allow_live and _can_ask_yahoo(key):
-        try:
-            eps = _eps_trend(ticker)
-            _record(key, True)
-            return {"eps1": float(eps.at["0y", "current"]), "eps2": float(eps.at["+1y", "current"]),
-                    "table": eps, "source": "live", "error": None}
-        except Exception as e:   # Yahoo refused, rate limit, network problem or no coverage
-            error = str(e)
-            _record(key, False, error)
-    snap = load_snapshot()
-    if ticker in snap.index and pd.notna(snap.at[ticker, "eps_0y"]) and pd.notna(snap.at[ticker, "eps_1y"]):
-        return {"eps1": float(snap.at[ticker, "eps_0y"]), "eps2": float(snap.at[ticker, "eps_1y"]),
-                "table": None, "source": "snapshot", "error": error}
-    return {"eps1": float("nan"), "eps2": float("nan"), "table": None, "source": None,
-            "error": error or _status["message"]}
-
-
-@cache_data
-def _company_info(ticker):
-    """Live Yahoo info. Raises when Yahoo sends an empty answer, so a failure is never cached."""
-    _messages.last = None
-    time.sleep(LIVE_PAUSE)
-    info = yf.Ticker(ticker).info or {}
-    if not info.get("longName") and not info.get("shortName"):
-        raise LookupError(_messages.last or "Yahoo Finance sent no company info")
-    return {"name": info.get("longName", ticker), "sector": info.get("sector"),
-            "industry": info.get("industry"), "yahoo_beta": info.get("beta"),
-            "yahoo_forward_pe": info.get("forwardPE")}
-
-
-def company_info(ticker, allow_live=True):
-    """Name, sector, industry and Yahoo's beta and forward P/E (cross-checks): live, else the snapshot."""
-    key = f"info:{ticker}"
-    if allow_live and _can_ask_yahoo(key):
-        try:
-            result = _company_info(ticker)
-            _record(key, True)
-            return result
-        except Exception as e:
-            _record(key, False, str(e))
-    snap = load_snapshot()
-    if ticker in snap.index:
-        r = snap.loc[ticker]
-        clean = lambda x: None if pd.isna(x) else x
-        return {"name": clean(r["name"]) or ticker, "sector": clean(r["sector"]), "industry": clean(r["industry"]),
-                "yahoo_beta": clean(r["yahoo_beta"]), "yahoo_forward_pe": clean(r["forward_pe"])}
-    return {"name": ticker, "sector": None, "industry": None, "yahoo_beta": None, "yahoo_forward_pe": None}
-
+# Analyst forecasts and company info come from core/yahoo.py, which handles Yahoo refusing
+# requests from Streamlit Cloud (backup files, no caching of failures). Prices for all stocks and
+# peers come from one batched download, cached for a day.
 
 @cache_data
 def _last_prices(tickers):
@@ -315,13 +176,8 @@ def value_portfolio(stocks, weights, rf, scenario="Base", erp=ERP, g_lt_base=0.0
     lookup = universe.set_index("ticker")
     tickers = list(stocks.index)
 
-    info, peers, basis = {}, {}, {}
-    refused_in_a_row = 0
+    info, peers, basis = yahoo.lookup_many(yahoo.company_info, tickers), {}, {}
     for t in tickers:
-        info[t] = company_info(t, allow_live=refused_in_a_row < STOP_AFTER)
-        refused_in_a_row = 0 if _live_ok.get(f"info:{t}") else refused_in_a_row + 1
-        if refused_in_a_row == STOP_AFTER:        # stop asking for 10 minutes
-            _status["blocked_until"] = time.time() + RETRY_AFTER
         if t in lookup.index:   # use the same labels as the peers' file when we can
             info[t]["sector"], info[t]["industry"] = lookup.at[t, "sector"], lookup.at[t, "industry"]
         peers[t], basis[t] = pick_peers(t, info[t]["industry"], info[t]["sector"], stocks.at[t, "beta"], universe)
@@ -330,27 +186,18 @@ def value_portfolio(stocks, weights, rf, scenario="Base", erp=ERP, g_lt_base=0.0
     prices, as_of, error = last_prices(everyone)
     if error:
         return {"error": error, "table": pd.DataFrame(), "peers": {}, "eps_tables": {}, "portfolio": None}
-    eps, eps_tables, source = {}, {}, {}
-    refused_in_a_row = 0
-    for t in tickers + [p for p in everyone if p not in tickers]:     # your stocks first
-        f = eps_forecasts(t, allow_live=refused_in_a_row < STOP_AFTER)
-        eps[t], source[t] = (f["eps1"], f["eps2"]), f["source"]
-        if t in tickers:
-            eps_tables[t] = f["table"]
-        if f["source"] == "live":
-            refused_in_a_row = 0
-        elif f["error"]:
-            refused_in_a_row += 1
-            if refused_in_a_row == STOP_AFTER:    # stop asking for 10 minutes
-                _status["blocked_until"] = time.time() + RETRY_AFTER
+    found = yahoo.lookup_many(yahoo.eps_forecasts, tickers + [p for p in everyone if p not in tickers])
+    eps = {t: (f["eps1"], f["eps2"]) for t, f in found.items()}
+    source = {t: f["source"] for t, f in found.items()}
+    eps_tables = {t: found[t]["table"] for t in tickers}
     status = {"live": [t for t in everyone if source[t] == "live"],
               "snapshot": [t for t in everyone if source[t] == "snapshot"],
               "missing": [t for t in everyone if source[t] is None],
               "own_missing": [t for t in tickers if source[t] is None],
-              "snapshot_date": snapshot_date(), "yahoo_message": _status["message"]}
+              "snapshot_date": yahoo.snapshot_date(), "yahoo_message": yahoo.status()["message"]}
     if all(source[t] is None for t in tickers):
         return {"error": "Yahoo Finance isn't sending analyst EPS forecasts to this app right now, and there is "
-                         "no saved backup for these stocks." + _said(status), "table": pd.DataFrame(),
+                         "no saved backup for these stocks." + yahoo.said(), "table": pd.DataFrame(),
                 "peers": {}, "eps_tables": {}, "portfolio": None, "forecasts": status}
 
     rows, peer_tables = [], {}
@@ -434,17 +281,6 @@ def value_portfolio(stocks, weights, rf, scenario="Base", erp=ERP, g_lt_base=0.0
             "g_lt": g_lt, "rf": rf, "erp": erp, "forecasts": status, "source": source}
 
 
-def _said(status):
-    """A short version of what Yahoo said, e.g. ' (Yahoo said: 401 Unauthorized, Invalid Crumb)'."""
-    msg = status.get("yahoo_message")
-    if not msg:
-        return ""
-    code = re.search(r"HTTP Error (\d+)", msg)
-    words = re.findall(r'"(?:code|description)":"([^"]+)"', msg)
-    short = ", ".join(([code.group(1) + " " + words[0]] + words[1:]) if code and words else words) or msg[:80]
-    return f" (Yahoo said: {short})"
-
-
 def forecast_note(val):
     """A plain-English note when some forecasts are not live. Returns (kind, text) or None.
 
@@ -456,10 +292,10 @@ def forecast_note(val):
         return None
     parts = []
     if snap:
-        parts.append(f"Yahoo Finance isn't sending live analyst forecasts right now{_said(status)}, so these values "
+        parts.append(f"Yahoo Finance isn't sending live analyst forecasts right now{yahoo.said(status.get('yahoo_message'))}, so these values "
                      f"use the saved backup from {status.get('snapshot_date')}.")
     if own_missing:
-        lead = "" if snap else f"Yahoo Finance isn't sending analyst forecasts right now{_said(status)}. "
+        lead = "" if snap else f"Yahoo Finance isn't sending analyst forecasts right now{yahoo.said(status.get('yahoo_message'))}. "
         parts.append(f"{lead}No forecasts for {', '.join(own_missing)} (not in the saved backup either), so "
                      f"{'it is' if len(own_missing) == 1 else 'they are'} left out. Try again in about 10 minutes.")
     return ("warning" if own_missing else "info"), " ".join(parts)

@@ -1,6 +1,6 @@
 # FactorFolio - AC420 project (Jasper Lin)
-# Homepage: the Portfolio Builder (Build Guide Steps 4 to 6: inputs, risk score,
-# bear/base/bull projections vs. SPY, allocation chart, fair-value card).
+# Homepage: the Portfolio Builder (Build Guide Steps 4 to 7: inputs, risk score with the Altman
+# Z-score, bear/base/bull projections vs. SPY, allocation chart, fair-value card).
 # Layout follows the Lecture 14 streamlit_app.py from Assignment #4; st.navigation names the pages.
 import pandas as pd
 import plotly.express as px
@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from core import data as fdata
-from core import models, projections, scoring, valuation
+from core import models, projections, scoring, valuation, yahoo
 
 st.set_page_config(page_title="FactorFolio", layout="centered")
 
@@ -137,11 +137,18 @@ def portfolio_builder():
         st.warning(f"{c['detail']}")
     result = models.analyze_portfolio(ds, usable)
     port = result["portfolio"]
-    scored = scoring.risk_score(port)
-    spy = scoring.risk_score(result["benchmark"]) if result["benchmark"] else None
-    words = scoring.explain(port, scored)
+    held = list(result["weights"].index)
+    prices_now = {t: ds["prices"][t].dropna().iloc[-1] for t in held if t in ds["prices"].columns}
+    with st.spinner("Looking up financial statements for the Altman Z-score..."):
+        z_table = models.altman_table(held, result["weights"].to_dict(), prices_now)
+    health = models.health_points(z_table)
+    scored = scoring.risk_score(port, health_points=health["points"])
+    spy = (scoring.risk_score(result["benchmark"], health_points=scoring.spy_health_points())
+           if result["benchmark"] else None)
+    words = scoring.explain(port, scored, health)
     fit = scoring.comfort_fit(scored["score"], comfort)
-    st.session_state.analysis = {"score": scored["score"], "band": scored["band"], "beta": port["beta"]}
+    st.session_state.analysis = {"score": scored["score"], "band": scored["band"], "beta": port["beta"],
+                                 "health": health["points"]}
 
     # ---------- Risk score card ----------
     st.subheader("Risk score")
@@ -154,6 +161,7 @@ def portfolio_builder():
     st.write(words["market"])
     st.write(words["diversification"])
     st.write(words["volatility"])
+    st.write(words["health"])
     if fit["status"] == "fits":
         st.success(fit["message"])
     elif fit["status"] == "above":
@@ -168,8 +176,15 @@ def portfolio_builder():
                                    "Part score (0 to 100)": round(c["score"]), "Weight": f"{c['weight']:.0%}",
                                    "Points": round(c["points"], 1)} for c in scored["components"]])
         st.dataframe(breakdown, hide_index=True, width="stretch")
-        st.caption("Financial health (Altman Z-score, Lecture 10) joins the score in Step 7; until then "
-                   "the other weights are rescaled to add to 100%.")
+        st.caption("Financial health uses Altman's Z-score (Lecture 10): a company in the safe zone adds 0 points, "
+                   "grey 50 and distress 100, weighted by how much of it you hold. Banks and insurers are left out. "
+                   "SPY's health comes from the S&P 100 backup, weighted by market value.")
+        fin_note = yahoo.backup_note(z_table["source"].to_dict(), "financial statements",
+                                     yahoo.financials_snapshot_date())
+        if fin_note:
+            st.caption(fin_note)
+        st.page_link("pages/1_Risk_Deep_Dive.py", label="See every part of the score in the Risk Deep Dive",
+                     icon="🧮")
 
     # ---------- Bear, base and bull projections ----------
     st.subheader("Bear, base and bull projections")

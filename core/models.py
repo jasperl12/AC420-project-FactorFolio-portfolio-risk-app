@@ -170,3 +170,118 @@ def analyze_portfolio(ds, weights, benchmark="SPY"):
 
     return {"stocks": stocks, "stock_details": details, "portfolio": portfolio,
             "benchmark": bench, "weights": w, "returns": port_ret}
+
+
+# ---------- Altman Z-score (Lecture 10; Build Guide Step 7) ----------
+# Z = 1.2 T1 + 1.4 T2 + 3.3 T3 + 0.6 T4 + 0.99 T5
+#   T1 = working capital / total assets       T2 = retained earnings / total assets
+#   T3 = EBIT / total assets                  T4 = market value of equity / total liabilities
+#   T5 = sales / total assets
+# Zones: safe above 2.99, grey 1.80 to 2.99, distress below 1.80.
+# Altman built Z on manufacturing firms, so banks, insurers and other financial firms are left out
+# (their balance sheets work differently, Lecture 10).
+ALTMAN_WEIGHTS = {"T1": 1.2, "T2": 1.4, "T3": 3.3, "T4": 0.6, "T5": 0.99}
+ZONE_POINTS = {"safe": 0, "grey": 50, "distress": 100}   # risk score points (outline 5.4)
+
+
+def altman_z(T1, T2, T3, T4, T5):
+    """Altman's Z-score from the five ratios (Lecture 10)."""
+    return 1.2 * T1 + 1.4 * T2 + 3.3 * T3 + 0.6 * T4 + 0.99 * T5
+
+
+def altman_zone(z):
+    if z > 2.99:
+        return "safe"
+    elif z >= 1.80:
+        return "grey"
+    else:
+        return "distress"
+
+
+def altman_not_applicable(sector, industry):
+    """Banks, insurers and other financial firms: Altman Z doesn't apply (check 15)."""
+    industry = industry if isinstance(industry, str) else ""      # missing labels come in as NaN
+    return sector == "Financial Services" or any(w in industry for w in ("Bank", "Insurance"))
+
+
+def altman_ratios(items, price):
+    """T1 to T5 from statement items (core/yahoo.py) and today's share price."""
+    ta, tl = items["total_assets"], items["total_liabilities"]
+    market_value = items["shares"] * price                 # market value of equity
+    return {"T1": (items["current_assets"] - items["current_liabilities"]) / ta,
+            "T2": items["retained_earnings"] / ta,
+            "T3": items["ebit"] / ta,
+            "T4": market_value / tl,
+            "T5": items["revenue"] / ta}
+
+
+def altman_for_stock(items, price, sector=None, industry=None):
+    """Z, zone and the five ratios for one stock, or why it can't be scored."""
+    row = {"T1": float("nan"), "T2": float("nan"), "T3": float("nan"), "T4": float("nan"),
+           "T5": float("nan"), "z": float("nan"), "zone": None,
+           "fiscal_year_end": items.get("fiscal_year_end"), "source": items.get("source")}
+    needed = ["current_assets", "current_liabilities", "total_assets", "retained_earnings",
+              "total_liabilities", "shares", "ebit", "revenue"]
+    if altman_not_applicable(sector, industry):
+        return {**row, "status": "not applicable (financial firm)"}
+    missing = [k for k in needed if pd.isna(items.get(k))]
+    if len(missing) == len(needed) and items.get("source") is None:
+        return {**row, "status": "Yahoo didn't send financial statements (no saved backup)"}
+    if missing or pd.isna(price) or items["total_assets"] <= 0 or items["total_liabilities"] <= 0:
+        why = ", ".join(k.replace("_", " ") for k in missing) or "price or totals"
+        return {**row, "status": f"missing data ({why})"}
+    ratios = altman_ratios(items, price)
+    z = altman_z(**ratios)
+    return {**row, **ratios, "z": z, "zone": altman_zone(z), "status": "scored"}
+
+
+def health_points(table, weight_col="weight"):
+    """Risk score points from Altman zones (safe 0, grey 50, distress 100), weighted by portfolio weight.
+
+    Stocks that can't be scored are left out and the weights rescaled (outline 5.4).
+    """
+    scored = table[table["zone"].isin(list(ZONE_POINTS))]
+    if scored.empty:
+        return {"points": None, "share_at_risk": None, "n_scored": 0}
+    w = scored[weight_col] / scored[weight_col].sum()
+    points = float((w * scored["zone"].map(ZONE_POINTS)).sum())
+    at_risk = float(w[scored["zone"] != "safe"].sum())
+    return {"points": points, "share_at_risk": at_risk, "n_scored": len(scored)}
+
+
+def altman_table(tickers, weights, prices):
+    """Altman Z for each stock in the portfolio, using core/yahoo.py for statements and sectors.
+
+    prices: {ticker: latest price}. weights: fractions or percents (only their ratios matter).
+    """
+    from core import yahoo   # downloads live in core/yahoo.py; the math above stays download-free
+    info = yahoo.lookup_many(yahoo.company_info, tickers)
+    statements = yahoo.lookup_many(yahoo.financials, tickers)
+    rows = []
+    for t in tickers:
+        items, price = statements[t], prices.get(t, float("nan"))
+        res = altman_for_stock(items, price, info[t]["sector"], info[t]["industry"])
+        # Price-to-book for the style map: book value per share = stockholders' equity / shares (Lecture 16)
+        bvps = items["stockholders_equity"] / items["shares"] if items.get("shares") else float("nan")
+        pb = price / bvps if pd.notna(bvps) and bvps > 0 else float("nan")
+        rows.append({"ticker": t, "weight": weights.get(t, 0), "sector": info[t]["sector"],
+                     "industry": info[t]["industry"], "price": price, "pb": pb, **res})
+    return pd.DataFrame(rows).set_index("ticker")
+
+
+def market_health_points(fin_snapshot, sectors):
+    """A stand-in for SPY's health points: the S&P 100 backup, weighted by market value like an index fund.
+
+    fin_snapshot: core.yahoo.load_financials_snapshot(). sectors: table with ticker, sector, industry.
+    """
+    if fin_snapshot.empty:
+        return None
+    lookup = sectors.set_index("ticker")
+    rows = []
+    for t, r in fin_snapshot.iterrows():
+        if t not in lookup.index:
+            continue
+        res = altman_for_stock(r.to_dict(), r["price"], lookup.at[t, "sector"], lookup.at[t, "industry"])
+        if res["zone"]:
+            rows.append({"zone": res["zone"], "weight": r["shares"] * r["price"]})
+    return health_points(pd.DataFrame(rows))["points"] if rows else None

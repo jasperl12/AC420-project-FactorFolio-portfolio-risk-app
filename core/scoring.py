@@ -6,8 +6,9 @@ the S&P 100 stocks estimated offline in notebooks/training_wrds.ipynb (data/sp10
   - Market risk:      portfolio beta from the CAPM regression (Lecture 12)          weight 40%
   - Volatility:       standard deviation of monthly portfolio returns (Lectures 1-3) weight 25%
   - Diversification:  firm-specific share of risk, 1 - R-squared (Lectures 12-13)   weight 20%
-  - Financial health: Altman Z-score zones (Lecture 10), added in Step 7             weight 15%
-Until the financial health part exists, the other weights are rescaled to add to 100%.
+  - Financial health: Altman Z-score zones (Lecture 10): safe 0, grey 50, distress 100 points,
+                      weighted by portfolio weight                                 weight 15%
+When no stock can get a Z-score (for example, only banks), the other weights are rescaled to add to 100%.
 Percentile = share of reference stocks below the value, the rank idea from Lecture 3.
 """
 from pathlib import Path
@@ -59,7 +60,7 @@ def risk_score(result, reference=None, health_points=None):
     """0 to 100 risk score for one result from core.models.analyze_stock / analyze_portfolio.
 
     result needs the keys 'beta', 'volatility' and 'firm_specific'.
-    health_points: 0 to 100 from the Altman Z-score zones (Step 7); None leaves that part out.
+    health_points: 0 to 100 from the Altman Z-score zones (core.models.health_points); None leaves it out.
     """
     ref = load_reference() if reference is None else reference
     components = [
@@ -74,7 +75,7 @@ def risk_score(result, reference=None, health_points=None):
          "score": percentile_rank(ref["firm_specific"], result["firm_specific"])},
     ]
     if health_points is not None:
-        components.append({"key": "health", "name": "Financial health", "metric": "Altman Z-score zones",
+        components.append({"key": "health", "name": "Financial health", "metric": "Altman Z zones (0 safe, 100 distress)",
                            "value": health_points, "value_text": f"{health_points:.0f} points",
                            "score": float(health_points)})
     total_weight = sum(WEIGHTS[c["key"]] for c in components)
@@ -99,8 +100,11 @@ def comfort_fit(score, comfort):
     return {"status": "fits", "message": f"This fits your {level} comfort level."}
 
 
-def explain(result, scored):
-    """Plain-English sentences for the homepage (outline section 3)."""
+def explain(result, scored, health=None):
+    """Plain-English sentences for the homepage (outline section 3).
+
+    health: the dict from core.models.health_points, or None.
+    """
     beta, fs, vol = result["beta"], result["firm_specific"], result["volatility"]
     move = abs(10 * beta)
     if beta >= 0:
@@ -113,4 +117,24 @@ def explain(result, scored):
                           else "That's fairly well diversified."))
     volatility = f"In a typical month, your portfolio moves up or down about {vol:.1%}."
     headline = f"Your portfolio scores {scored['score']:.0f} out of 100: {scored['risk_words']}."
-    return {"headline": headline, "market": market, "diversification": diversification, "volatility": volatility}
+    if health is None or health["points"] is None:
+        health_text = ("Financial health is left out of the score for now: none of your stocks could get an "
+                       "Altman Z-score (the Risk Deep Dive page shows why).")
+    elif health["share_at_risk"] == 0:
+        health_text = "Every company you own is in Altman's safe zone, so financial health adds no risk."
+    else:
+        health_text = (f"About {health['share_at_risk']:.0%} of your money is in companies in Altman's grey or "
+                       "distress zone, where the risk of financial trouble is higher.")
+    return {"headline": headline, "market": market, "diversification": diversification, "volatility": volatility,
+            "health": health_text}
+
+
+@cache_data
+def spy_health_points():
+    """SPY's financial health points, estimated from the S&P 100 backup weighted by market value.
+
+    Returns None when there is no backup file, and SPY's score then uses the other three parts.
+    """
+    from core import models, yahoo
+    sectors = pd.read_csv(DATA_DIR / "sp100_tickers.csv")
+    return models.market_health_points(yahoo.load_financials_snapshot(), sectors)
