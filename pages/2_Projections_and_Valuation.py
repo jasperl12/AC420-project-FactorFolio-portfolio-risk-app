@@ -156,10 +156,13 @@ if val["error"]:
     st.stop()
 table = val["table"]
 g_lt = val["g_lt"]
+note = valuation.forecast_note(val)
 
 # ---------- Tab 2: DCF ----------
 with tabs[1]:
     st.subheader("Discounted cash flow (Lecture 15)")
+    if note:
+        (st.warning if note[0] == "warning" else st.info)(note[1])
     st.write("Each stock's value is today's worth of its next two years of analyst EPS forecasts, plus a "
              "growing perpetuity from year 3. The discount rate is the CAPM cost of equity.")
     st.latex(r"\begin{aligned} P &= \frac{EPS_1}{1+r_e} + \frac{EPS_2}{(1+r_e)^2} \\ "
@@ -197,8 +200,12 @@ with tabs[1]:
     with st.expander("Look at the whole analyst EPS table (check 17)"):
         pick = st.selectbox("Stock", list(table.index), key="eps_pick")
         eps_table = val["eps_tables"].get(pick)
-        if eps_table is None or eps_table.empty:
-            st.write("Yahoo Finance has no analyst EPS forecasts for this stock.")
+        if val["source"].get(pick) == "snapshot":
+            st.write(f"Yahoo isn't sending the live table right now. The saved backup from "
+                     f"{val['forecasts']['snapshot_date']} has EPS {table.at[pick, 'eps1']:.2f} for '0y' and "
+                     f"{table.at[pick, 'eps2']:.2f} for '+1y'.")
+        elif eps_table is None or eps_table.empty:
+            st.write("Yahoo Finance didn't send analyst EPS forecasts for this stock.")
         else:
             st.dataframe(eps_table, width="stretch")
             st.caption("'0y' is the current fiscal year and '+1y' is next fiscal year (Lecture 16). The DCF "
@@ -207,6 +214,8 @@ with tabs[1]:
 # ---------- Tab 3: peer comparables ----------
 with tabs[2]:
     st.subheader("Peer comparables (Lecture 16)")
+    if note:
+        st.caption(note[1])
     st.write("Price a stock the way the market prices similar companies: predicted price = the peers' median "
              "P/E × the stock's next-year EPS. Peers are other S&P 100 stocks in the same industry, or the "
              "same sector when there are fewer than 3, keeping the 6 with the closest beta.")
@@ -313,5 +322,7 @@ with tabs[3]:
                "already counts on more growth than the DCF assumes, so the DCF value comes out below the price. "
                "A positive gap means the opposite.")
 
+backup = (f" When Yahoo doesn't answer, forecasts come from the saved backup of {val['forecasts']['snapshot_date']}."
+          if val["forecasts"]["snapshot_date"] else "")
 st.caption(f"For education only, not investment advice. Prices from Yahoo Finance as of {val['prices_as_of']}; "
-           "analyst EPS forecasts from Yahoo Finance (eps_trend), cached for a day.")
+           f"analyst EPS forecasts from Yahoo Finance (eps_trend), cached for a day.{backup}")

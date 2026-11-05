@@ -238,6 +238,9 @@ def portfolio_builder():
         st.warning(val["error"] + " The fair-value check will come back when Yahoo Finance responds.")
     else:
         fv = val["table"]
+        note = valuation.forecast_note(val)
+        if note:
+            (st.warning if note[0] == "warning" else st.caption)(note[1])
         st.info(valuation.explain(val["portfolio"], fv).replace("$", "\\$"))
         card = pd.DataFrame({
             "Stock": fv.index,
