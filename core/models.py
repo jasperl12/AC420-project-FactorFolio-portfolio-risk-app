@@ -224,6 +224,11 @@ def altman_for_stock(items, price, sector=None, industry=None):
               "total_liabilities", "shares", "ebit", "revenue"]
     if altman_not_applicable(sector, industry):
         return {**row, "status": "not applicable (financial firm)"}
+    items = dict(items)
+    if pd.isna(items.get("total_liabilities")) and pd.notna(items.get("total_assets")) \
+            and pd.notna(items.get("stockholders_equity")):
+        # Yahoo sometimes leaves total liabilities blank: use the balance sheet identity
+        items["total_liabilities"] = items["total_assets"] - items["stockholders_equity"]
     missing = [k for k in needed if pd.isna(items.get(k))]
     if len(missing) == len(needed) and items.get("source") is None:
         return {**row, "status": "Yahoo didn't send financial statements (no saved backup)"}
@@ -264,8 +269,10 @@ def altman_table(tickers, weights, prices):
         # Price-to-book for the style map: book value per share = stockholders' equity / shares (Lecture 16)
         bvps = items["stockholders_equity"] / items["shares"] if items.get("shares") else float("nan")
         pb = price / bvps if pd.notna(bvps) and bvps > 0 else float("nan")
+        older = items.get("older_items")
         rows.append({"ticker": t, "weight": weights.get(t, 0), "sector": info[t]["sector"],
-                     "industry": info[t]["industry"], "price": price, "pb": pb, **res})
+                     "industry": info[t]["industry"], "price": price, "pb": pb, **res,
+                     "older_items": older if isinstance(older, str) else ""})
     return pd.DataFrame(rows).set_index("ticker")
 
 

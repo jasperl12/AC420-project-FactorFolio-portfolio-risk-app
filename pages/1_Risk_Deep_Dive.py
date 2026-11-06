@@ -272,8 +272,13 @@ with tabs[4]:
         st.caption(note)
     st.caption("T1 = working capital / total assets, T2 = retained earnings / total assets, T3 = EBIT / total "
                "assets, T4 = market value of equity / total liabilities, T5 = sales / total assets. Statements "
-               "are the latest fiscal year from Yahoo Finance; the market value uses today's price. Zones: safe "
-               "above 2.99, grey 1.80 to 2.99, distress below 1.80.")
+               "are the latest fiscal year from Yahoo Finance; the market value uses today's price. When Yahoo "
+               "leaves total liabilities blank, the app uses total assets minus equity. Zones: safe above 2.99, "
+               "grey 1.80 to 2.99, distress below 1.80.")
+    older = {t: o for t, o in z_table["older_items"].items() if o}
+    if older:
+        st.caption("Yahoo left these line items blank for the latest year, so the prior year's values are used: "
+                   + "; ".join(f"{t}: {o.replace('_', ' ')}" for t, o in older.items()) + ".")
     with st.expander("What does this mean?"):
         st.write("Altman's Z-score combines five ratios into one number: higher is safer (Lecture 10). In class, "
                  "General Motors scored 0.67 at the end of 2007, deep in the distress zone, about 17 months "

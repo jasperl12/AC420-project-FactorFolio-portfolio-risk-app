@@ -238,14 +238,23 @@ def statement_items(balance_sheet, income_statement):
     """Pull the Altman Z inputs from the latest fiscal year (the first column) of Yahoo's statements.
 
     Like the Lecture 3 notebook's df.loc[selected_rows], but with .get so a missing or renamed
-    row gives NaN instead of a KeyError (Yahoo's labels differ by company).
+    row gives NaN instead of a KeyError (Yahoo's labels differ by company). When Yahoo left a
+    line item blank for the latest year, the prior year's value is used and listed in 'older_items'.
     """
-    bs, inc = balance_sheet.iloc[:, 0], income_statement.iloc[:, 0]
     items = {"fiscal_year_end": pd.Timestamp(balance_sheet.columns[0]).strftime("%Y-%m-%d")}
-    for name, labels in BALANCE_ROWS.items():
-        items[name] = next((float(bs.get(l)) for l in labels if pd.notna(bs.get(l))), float("nan"))
-    for name, labels in INCOME_ROWS.items():
-        items[name] = next((float(inc.get(l)) for l in labels if pd.notna(inc.get(l))), float("nan"))
+    older = []
+    for table, rows in [(balance_sheet, BALANCE_ROWS), (income_statement, INCOME_ROWS)]:
+        for name, labels in rows.items():
+            value = float("nan")
+            for col in range(min(2, table.shape[1])):          # latest year, then the year before
+                year = table.iloc[:, col]
+                value = next((float(year.get(l)) for l in labels if pd.notna(year.get(l))), float("nan"))
+                if pd.notna(value):
+                    if col > 0:
+                        older.append(name)
+                    break
+            items[name] = value
+    items["older_items"] = ", ".join(older)
     return items
 
 
