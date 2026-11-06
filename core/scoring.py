@@ -26,7 +26,9 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 WEIGHTS = {"market": 0.40, "volatility": 0.25, "diversification": 0.20, "health": 0.15}
 
 # Score bands and the matching comfort levels (outline section 5.4)
-COMFORT_RANGES = {"Conservative": (0, 35), "Moderate": (35, 65), "Aggressive": (65, 100)}
+# Step 8 calibration moved the cutoffs from 35 and 65 to 22 and 45, so SPY (about 25) sits in the
+# moderate band instead of the low-risk one (outline section 12).
+COMFORT_RANGES = {"Conservative": (0, 22), "Moderate": (22, 45), "Aggressive": (45, 100)}
 RISK_WORDS = {"Conservative": "low risk", "Moderate": "moderate risk", "Aggressive": "high risk"}
 COMFORT_HELP = {
     "Conservative": "Steadier returns, even if growth is slower",
@@ -48,12 +50,18 @@ def percentile_rank(values, x):
 
 
 def band_for(score):
-    """'Conservative' for 0 to 35, 'Moderate' for 35 to 65, 'Aggressive' for 65 to 100."""
-    if score < 35:
+    """'Conservative', 'Moderate' or 'Aggressive', using the cutoffs in COMFORT_RANGES."""
+    if score < COMFORT_RANGES["Conservative"][1]:
         return "Conservative"
-    if score < 65:
+    if score < COMFORT_RANGES["Moderate"][1]:
         return "Moderate"
     return "Aggressive"
+
+
+def bands_text():
+    """'0 to 22 low risk, 22 to 45 moderate, 45 to 100 high' for captions."""
+    (a, b), (_, c), (_, d) = COMFORT_RANGES.values()
+    return f"{a} to {b} low risk, {b} to {c} moderate, {c} to {d} high"
 
 
 def risk_score(result, reference=None, health_points=None):

@@ -65,14 +65,15 @@ def growth_chart(path):
 
 
 def gauge(score, spy_score):
+    low_cut, high_cut = scoring.COMFORT_RANGES["Moderate"]       # band cutoffs (Step 8 calibration)
     fig = go.Figure(go.Indicator(
         mode="gauge+number", value=score,
         number={"suffix": " / 100", "font": {"size": 36}, "valueformat": ".0f"},
-        gauge={"axis": {"range": [0, 100], "tickvals": [0, 35, 65, 100]},
+        gauge={"axis": {"range": [0, 100], "tickvals": [0, low_cut, high_cut, 100]},
                "bar": {"color": "#1f2937", "thickness": 0.25},
-               "steps": [{"range": [0, 35], "color": "#bbf7d0"},
-                         {"range": [35, 65], "color": "#fde68a"},
-                         {"range": [65, 100], "color": "#fecaca"}],
+               "steps": [{"range": [0, low_cut], "color": "#bbf7d0"},
+                         {"range": [low_cut, high_cut], "color": "#fde68a"},
+                         {"range": [high_cut, 100], "color": "#fecaca"}],
                "threshold": {"line": {"color": "#2563eb", "width": 4}, "thickness": 0.9,
                              "value": spy_score if spy_score is not None else score}}))
     fig.update_layout(height=240, margin=dict(l=30, r=30, t=20, b=20))
@@ -160,7 +161,7 @@ def portfolio_builder():
                     config={"displayModeBar": False})
     if spy:
         st.caption(f"Blue line: an S&P 500 fund (SPY) scores {spy['score']:.0f}. "
-                   "Green = low risk (0 to 35), yellow = moderate (35 to 65), red = high (65 to 100).")
+                   f"Green, yellow and red: {scoring.bands_text()}.")
     st.markdown(f"**{words['headline']}**")
     st.write(words["market"])
     st.write(words["diversification"])

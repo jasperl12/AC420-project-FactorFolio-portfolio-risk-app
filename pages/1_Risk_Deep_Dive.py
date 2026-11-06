@@ -75,8 +75,7 @@ with tabs[0]:
                             "Points": parts["Points"].round(1)})
     st.dataframe(table[["Part", "Part score", "Weight", "Points", "Your value", "Measure"]],
                  hide_index=True, width="stretch")
-    st.write(f"**Total: {scored['score']:.1f} points**, {scored['risk_words']} (0 to 35 low, 35 to 65 moderate, "
-             "65 to 100 high).")
+    st.write(f"**Total: {scored['score']:.1f} points**, {scored['risk_words']} ({scoring.bands_text()}).")
     with st.expander("What does this mean?"):
         st.write("The first three parts compare your portfolio with 66 large U.S. stocks (S&P 100 members in "
                  "the class WRDS data): a part score of 70 means your portfolio is riskier on that measure than "
