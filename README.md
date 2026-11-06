@@ -18,16 +18,19 @@ Live app: https://ac420-factorfolio-jasperlin.streamlit.app
 ## Repo layout
 - `streamlit_app.py`: homepage (Portfolio Builder)
 - `pages/`: Risk Deep Dive, Projections & Valuation, Stock Ideas, Data Check
-- `core/`: calculations (data, models, valuation, scoring, projections, suggestions)
+- `core/`: calculations (data, models, scoring, projections, valuation, suggestions) and `yahoo.py`,
+  which handles Yahoo Finance lookups that can be refused on Streamlit Cloud
 - `data/`: small CSV files the app reads (see `data/README.md`)
 - `notebooks/training_wrds.ipynb`: offline Colab notebook that builds the files in `data/`
 - `notebooks/known_answer_tests.ipynb`: checks the code against answers from class
 - `notebooks/yahoo_backup.ipynb`: Colab notebook that saves the Yahoo Finance backups
+- `notebooks/calibration.ipynb`: scores test portfolios and checks the suggestions engine (Step 8)
 
 ## Code credits
 - Adapted from AC420 class notebooks by Prof. Peter Wysocki: Lecture 12 & 13 CAPM and
   FF3 regressions, Lecture 15 & 16 DCF valuation, Lecture 16 & 17 comparables,
-  Lecture 17 alpha regressions, and the Lecture 14 Streamlit starter app (Assignment #4)
+  Lecture 17 alpha regressions, Lecture 10 Altman Z-score, Lecture 3 financial statements, and the
+  Lecture 14 Streamlit starter app (Assignment #4)
 - Written with AI assistance (Claude by Anthropic); my AI usage log records how AI helped
 
 For education only, not investment advice.

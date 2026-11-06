@@ -283,8 +283,10 @@ with tabs[4]:
         st.write("Altman's Z-score combines five ratios into one number: higher is safer (Lecture 10). In class, "
                  "General Motors scored 0.67 at the end of 2007, deep in the distress zone, about 17 months "
                  "before it filed for bankruptcy. Z is a screening tool, not a verdict. Altman built it on "
-                 "manufacturing companies, so banks and insurers are left out, and asset-light companies (like "
-                 "software firms) can look different from the firms in his sample.")
+                 "manufacturing companies, so banks and insurers are left out. Utilities and real estate firms "
+                 "are left out too: their large, steady debt put almost all of them in the distress zone even "
+                 "though they rarely fail, so FactorFolio doesn't count it against them. Asset-light companies "
+                 "(like software firms) can also look different from the firms in his sample.")
 
 st.caption("For education only, not investment advice. Regressions use the last "
            f"{len(ds['window'])} months of Yahoo Finance prices and Ken French factors.")

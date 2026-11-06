@@ -179,7 +179,9 @@ def analyze_portfolio(ds, weights, benchmark="SPY"):
 #   T5 = sales / total assets
 # Zones: safe above 2.99, grey 1.80 to 2.99, distress below 1.80.
 # Altman built Z on manufacturing firms, so banks, insurers and other financial firms are left out
-# (their balance sheets work differently, Lecture 10).
+# (their balance sheets work differently, Lecture 10). Step 8 calibration also leaves out utilities
+# and real estate: their heavy, regulated debt put almost all of them in the distress zone, which
+# made an all-utilities portfolio score riskier than three tech stocks' worth of beta suggests.
 ALTMAN_WEIGHTS = {"T1": 1.2, "T2": 1.4, "T3": 3.3, "T4": 0.6, "T5": 0.99}
 ZONE_POINTS = {"safe": 0, "grey": 50, "distress": 100}   # risk score points (outline 5.4)
 
@@ -198,10 +200,20 @@ def altman_zone(z):
         return "distress"
 
 
+NOT_APPLICABLE = {"Financial Services": "financial firm", "Utilities": "utility", "Real Estate": "real estate"}
+
+
 def altman_not_applicable(sector, industry):
-    """Banks, insurers and other financial firms: Altman Z doesn't apply (check 15)."""
+    """Why Altman Z doesn't apply (check 15), or None when it does.
+
+    Financial firms (Lecture 10), plus utilities and real estate (Step 8 calibration).
+    """
     industry = industry if isinstance(industry, str) else ""      # missing labels come in as NaN
-    return sector == "Financial Services" or any(w in industry for w in ("Bank", "Insurance"))
+    if sector in NOT_APPLICABLE:
+        return NOT_APPLICABLE[sector]
+    if any(w in industry for w in ("Bank", "Insurance")):
+        return "financial firm"
+    return None
 
 
 def altman_ratios(items, price):
@@ -222,8 +234,9 @@ def altman_for_stock(items, price, sector=None, industry=None):
            "fiscal_year_end": items.get("fiscal_year_end"), "source": items.get("source")}
     needed = ["current_assets", "current_liabilities", "total_assets", "retained_earnings",
               "total_liabilities", "shares", "ebit", "revenue"]
-    if altman_not_applicable(sector, industry):
-        return {**row, "status": "not applicable (financial firm)"}
+    why_not = altman_not_applicable(sector, industry)
+    if why_not:
+        return {**row, "status": f"not applicable ({why_not})"}
     items = dict(items)
     if pd.isna(items.get("total_liabilities")) and pd.notna(items.get("total_assets")) \
             and pd.notna(items.get("stockholders_equity")):

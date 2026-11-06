@@ -1,6 +1,6 @@
 # FactorFolio - AC420 project (Jasper Lin)
-# Homepage: the Portfolio Builder (Build Guide Steps 4 to 7: inputs, risk score with the Altman
-# Z-score, bear/base/bull projections vs. SPY, allocation chart, fair-value card).
+# Homepage: the Portfolio Builder (Build Guide Steps 4 to 8: inputs, risk score with the Altman
+# Z-score, bear/base/bull projections vs. SPY, allocation chart, fair-value card, balance-your-risk card).
 # Layout follows the Lecture 14 streamlit_app.py from Assignment #4; st.navigation names the pages.
 import pandas as pd
 import plotly.express as px
@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from core import data as fdata
-from core import models, projections, scoring, valuation, yahoo
+from core import models, projections, scoring, suggestions, valuation, yahoo
 
 st.set_page_config(page_title="FactorFolio", layout="centered")
 
@@ -101,6 +101,10 @@ def portfolio_builder():
     if "holdings_editor" not in st.session_state:   # first time on this page: start from the saved table
         st.session_state.editor_base = st.session_state.holdings.copy()
     st.caption("Type a ticker and its weight. Add rows at the bottom of the table; select a row to delete it.")
+    added = st.session_state.pop("just_added", None)
+    if added:
+        st.success(f"Added {', '.join(added)} at 10%{' each' if len(added) > 1 else ''}; your other stocks "
+                   "were scaled down to make room.")
     table = st.data_editor(
         st.session_state.editor_base, key="holdings_editor", num_rows="dynamic", hide_index=True, width="stretch",
         column_config={"Ticker": st.column_config.TextColumn("Ticker", help="Yahoo Finance symbol, e.g. AAPL"),
@@ -177,7 +181,7 @@ def portfolio_builder():
                                    "Points": round(c["points"], 1)} for c in scored["components"]])
         st.dataframe(breakdown, hide_index=True, width="stretch")
         st.caption("Financial health uses Altman's Z-score (Lecture 10): a company in the safe zone adds 0 points, "
-                   "grey 50 and distress 100, weighted by how much of it you hold. Banks and insurers are left out. "
+                   "grey 50 and distress 100, weighted by how much of it you hold. Banks, insurers, utilities and real estate firms are left out. "
                    "SPY's health comes from the S&P 100 backup, weighted by market value.")
         fin_note = yahoo.backup_note(z_table["source"].to_dict(), "financial statements",
                                      yahoo.financials_snapshot_date())
@@ -270,6 +274,38 @@ def portfolio_builder():
                    f"S&P 100 stocks × next-year EPS; Lecture 16). Prices as of {val['prices_as_of']}.")
     st.page_link("pages/2_Projections_and_Valuation.py", label="See the DCF, peer comparables and what-if controls",
                  icon="📈")
+
+    # ---------- Balance your risk (outline 5.7; hidden when the score already fits) ----------
+    if fit["status"] != "fits":
+        st.subheader("Balance your risk")
+        low, high = scoring.COMFORT_RANGES[comfort]
+        try:
+            with st.spinner("Testing each S&P 100 stock as a 10% addition to your portfolio..."):
+                ideas = suggestions.test_scores(result["returns"], z_table, comfort,
+                                                set(z_table["sector"].dropna()), rf["rf"])
+            top = suggestions.suggest(ideas, scored["score"], comfort)
+        except Exception as e:
+            top = None
+            st.caption(f"Suggestions are unavailable right now ({e}). Try again in a few minutes.")
+        if top is not None and top.empty:
+            st.write("None of the S&P 100 stocks moves your score toward your comfort level when added at 10%. "
+                     "Try changing your weights instead.")
+        elif top is not None:
+            direction = "raise" if fit["status"] == "below" else "lower"
+            st.write(f"Adding one of these at 10% would {direction} your score toward the {comfort.lower()} "
+                     f"range ({low} to {high}):")
+            full = len(weights) >= MAX_STOCKS
+            for t, row in top.iterrows():
+                c1, c2, c3 = st.columns([3, 2, 1], vertical_alignment="center")
+                new_sector = " (a sector you don't own yet)" if row["new_sector"] else ""
+                c1.markdown(f"**{t}** {row['name']}  \n{row['sector']}{new_sector}")
+                c2.markdown(f"Score {scored['score']:.0f} → **{row['new_score']:.0f}**  \nbeta {row['beta']:.2f}")
+                c3.button("Add", key=f"add_{t}", on_click=suggestions.add_to_holdings, args=([t],), disabled=full,
+                          width="stretch")
+            if full:
+                st.caption(f"You already hold {MAX_STOCKS} stocks, the most FactorFolio handles.")
+        st.page_link("pages/3_Stock_Ideas.py", label="Browse all stock ideas", icon="💡")
+
     st.page_link("pages/4_Data_Check.py", label="Look at the data behind this score", icon="🔍")
     rf_date = f" on {rf['as_of']}" if rf["as_of"] else ""
     st.caption(f"For education only, not investment advice. Prices from Yahoo Finance through "
