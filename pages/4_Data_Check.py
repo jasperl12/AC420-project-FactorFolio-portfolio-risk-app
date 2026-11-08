@@ -1,12 +1,15 @@
-# FactorFolio - Data Check page (Build Guide Step 2)
+# FactorFolio - Data Check page (Build Guide Steps 2 and 9)
 # Prof. Wysocki's rule: look at the data first. This page shows the raw numbers behind the
 # portfolio before any model runs: the hygiene checklist (outline section 7), row counts
-# before and after the merge, raw returns, describe() statistics and a 1.5 x IQR boxplot.
+# before and after the merge, raw returns, describe() statistics, a 1.5 x IQR boxplot, and
+# where every input comes from and how fresh it is (check 16).
 import matplotlib.pyplot as plt
+import pandas as pd
 import streamlit as st
 from matplotlib.ticker import PercentFormatter
 
 from core import data as fdata
+from core import projections, yahoo
 
 st.set_page_config(page_title="Data Check | FactorFolio", layout="centered")
 st.title("Data Check")
@@ -30,9 +33,10 @@ if ds["error"]:
     st.stop()
 
 window = ds["window"]
-cols = ds["tickers"] + ([fdata.BENCHMARK] if fdata.BENCHMARK in window.columns else [])
+cols = ds["tickers"] + ([fdata.BENCHMARK] if fdata.BENCHMARK in window.columns and fdata.BENCHMARK not in ds["tickers"]
+                        else [])
 if not ds["tickers"]:
-    st.error("None of these tickers have enough monthly data to analyze.")
+    st.error(fdata.no_data_message(ds))
     st.stop()
 
 # 1. Checklist
@@ -97,3 +101,61 @@ st.caption("From Ken French's Data Library, converted from percent to decimals. 
 st.subheader("7. Missing values")
 st.dataframe(window[cols + fdata.FACTOR_COLS].isna().sum().rename("Missing months").to_frame(),
              width="stretch")
+
+# 8. Where every input comes from (check 16: inputs are not stale)
+st.subheader("8. Where every input comes from")
+TODAY = pd.Timestamp.today().normalize()
+held = ds["tickers"]
+rf = projections.risk_free_rate()
+with st.spinner("Checking analyst forecasts and financial statements..."):
+    eps = yahoo.lookup_many(yahoo.eps_forecasts, held)
+    fin = yahoo.lookup_many(yahoo.financials, held)
+
+
+def where_from(results, backup_date):
+    """'live for AAPL, MSFT; saved backup from 2026-11-05 for KO' and an icon."""
+    groups = {"live": [], "snapshot": [], None: []}
+    for t, r in results.items():
+        groups[r["source"]].append(t)
+    parts = []
+    if groups["live"]:
+        parts.append("live for " + ", ".join(groups["live"]))
+    if groups["snapshot"]:
+        parts.append(f"saved backup from {backup_date} for " + ", ".join(groups["snapshot"]))
+    if groups[None]:
+        parts.append("missing for " + ", ".join(groups[None]))
+    icon = "fail" if not groups["live"] and not groups["snapshot"] else ("warn" if groups[None] else "pass")
+    return icon, "; ".join(parts)
+
+
+def days_old(date_text):
+    return (TODAY - pd.Timestamp(date_text)).days if date_text else None
+
+
+eps_icon, eps_text = where_from(eps, yahoo.snapshot_date())
+fin_icon, fin_text = where_from(fin, yahoo.financials_snapshot_date())
+years = sorted({r["fiscal_year_end"] for r in fin.values() if r.get("fiscal_year_end")})
+fin_text += f" (latest fiscal years: {', '.join(years)})" if years else ""
+rows = [
+    ("pass", "Monthly prices", f"Yahoo Finance, downloaded live, through {ds['as_of']['prices']}."),
+    ("pass", "Fama-French factors", f"Ken French's Data Library (data/ff_factors_monthly.csv), through "
+                                    f"{ds['as_of']['factors']}. Check 8 above says whether it needs an update."),
+    ("pass" if rf["ok"] else "warn", "Risk-free rate", rf["note"]),
+    (eps_icon, "Analyst EPS forecasts", f"Yahoo Finance eps_trend: {eps_text}."),
+    (fin_icon, "Financial statements", f"Yahoo Finance balance_sheet and financials: {fin_text}."),
+    ("info", "Risk score reference stocks", "CAPM estimates for 66 S&P 100 stocks from the Lecture 17 WRDS "
+                                            "class file (monthly returns from June 2021), made offline in "
+                                            "notebooks/training_wrds.ipynb. No raw WRDS data is in the app."),
+    ("info", "Bear and bull markets", "25th and 75th percentiles of annual U.S. market returns, 1927 to 2025 "
+                                      "(Ken French Data Library, data/market_scenarios.csv)."),
+]
+for name, date in [("analyst forecast", yahoo.snapshot_date()), ("financial statement", yahoo.financials_snapshot_date())]:
+    age = days_old(date)
+    if age is not None and age > 14:
+        rows.append(("warn", f"Old {name} backup", f"The saved backup is {age} days old. Rerun "
+                                                   "notebooks/yahoo_backup.ipynb in Colab to refresh it."))
+for status, name, text in rows:   # a list, so long lines wrap on phones
+    st.markdown(f"{icons[status]} **{name}:** {text}".replace("$", "\\$"))
+
+st.caption("For education only, not investment advice. Live Yahoo answers are kept for a day; when Yahoo refuses "
+           "a request, the app uses the saved backups and says so.")

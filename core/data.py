@@ -199,7 +199,7 @@ def build_dataset(tickers, weights=None):
                    else "Fewer than " + str(MIN_MONTHS) + " months, left out of the regressions: " + ", ".join(short)})
 
     # Check 7: missing values inside the window
-    cols_in_window = keep + ([BENCHMARK] if BENCHMARK in window.columns else [])
+    cols_in_window = keep + ([BENCHMARK] if BENCHMARK in window.columns and BENCHMARK not in keep else [])
     n_missing = int(window[cols_in_window + FACTOR_COLS].isna().sum().sum())
     checks.append({"check": "7. No missing values",
                    "status": "pass" if n_missing == 0 else "warn",
@@ -238,3 +238,15 @@ def build_dataset(tickers, weights=None):
         "checks": sorted(checks, key=lambda c: order[c["check"]]),
     })
     return result
+
+
+def no_data_message(ds):
+    """Plain-English reason when none of the stocks can be analyzed (Step 9: warn, never crash)."""
+    parts = ["None of these stocks have enough monthly data to analyze."]
+    if ds.get("missing_tickers"):
+        parts.append(f"Yahoo Finance has no prices for {', '.join(ds['missing_tickers'])}: check the spelling "
+                     "(Yahoo writes class shares with a dash, like BRK-B).")
+    if ds.get("short_history"):
+        parts.append(f"{', '.join(ds['short_history'])} {'has' if len(ds['short_history']) == 1 else 'have'} "
+                     f"fewer than {MIN_MONTHS} months of prices.")
+    return " ".join(parts)

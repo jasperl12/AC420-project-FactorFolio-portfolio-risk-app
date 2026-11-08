@@ -196,8 +196,9 @@ def value_portfolio(stocks, weights, rf, scenario="Base", erp=ERP, g_lt_base=0.0
               "own_missing": [t for t in tickers if source[t] is None],
               "snapshot_date": yahoo.snapshot_date(), "yahoo_message": yahoo.status()["message"]}
     if all(source[t] is None for t in tickers):
-        return {"error": "Yahoo Finance isn't sending analyst EPS forecasts to this app right now, and there is "
-                         "no saved backup for these stocks." + yahoo.said(), "table": pd.DataFrame(),
+        return {"error": f"No analyst EPS forecasts for {', '.join(tickers)}. Yahoo Finance didn't send any (it may be "
+                         "refusing requests right now, and funds like ETFs have none), and the saved backup doesn't "
+                         "cover them." + yahoo.said(), "table": pd.DataFrame(),
                 "peers": {}, "eps_tables": {}, "portfolio": None, "forecasts": status}
 
     rows, peer_tables = [], {}
@@ -295,9 +296,10 @@ def forecast_note(val):
         parts.append(f"Yahoo Finance isn't sending live analyst forecasts right now{yahoo.said(status.get('yahoo_message'))}, so these values "
                      f"use the saved backup from {status.get('snapshot_date')}.")
     if own_missing:
-        lead = "" if snap else f"Yahoo Finance isn't sending analyst forecasts right now{yahoo.said(status.get('yahoo_message'))}. "
-        parts.append(f"{lead}No forecasts for {', '.join(own_missing)} (not in the saved backup either), so "
-                     f"{'it is' if len(own_missing) == 1 else 'they are'} left out. Try again in about 10 minutes.")
+        parts.append(f"No analyst forecasts for {', '.join(own_missing)}: Yahoo didn't send any (it may be refusing "
+                     f"requests{yahoo.said(status.get('yahoo_message'))}, and funds like ETFs have none) and the saved "
+                     f"backup doesn't cover {'it' if len(own_missing) == 1 else 'them'}, so "
+                     f"{'it is' if len(own_missing) == 1 else 'they are'} left out of the fair-value check.")
     return ("warning" if own_missing else "info"), " ".join(parts)
 
 

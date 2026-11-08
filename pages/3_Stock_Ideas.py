@@ -37,7 +37,7 @@ if ds["error"]:
     st.stop()
 usable = {t: w for t, w in portfolio.items() if t in ds["tickers"]}
 if not usable:
-    st.error("None of these stocks have enough monthly data to analyze.")
+    st.error(fdata.no_data_message(ds))
     st.stop()
 result = models.analyze_portfolio(ds, usable)
 held = list(result["weights"].index)

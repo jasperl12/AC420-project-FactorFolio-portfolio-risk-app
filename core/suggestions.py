@@ -161,7 +161,8 @@ def add_to_holdings(tickers, weight_each=CANDIDATE_WEIGHT * 100):
                                  "Weight (%)": [float(w) for w in fdata.DEFAULT_PORTFOLIO.values()]})
     current = {}
     for _, row in holdings.iterrows():
-        t = fdata.clean_tickers(str(row.get("Ticker") or ""))
+        raw = row.get("Ticker")
+        t = fdata.clean_tickers("" if pd.isna(raw) else str(raw))
         w = pd.to_numeric(row.get("Weight (%)"), errors="coerce")
         if t and pd.notna(w) and w > 0:
             current[t[0]] = current.get(t[0], 0) + float(w)

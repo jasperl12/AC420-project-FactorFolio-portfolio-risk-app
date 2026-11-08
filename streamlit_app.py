@@ -31,7 +31,8 @@ def holdings_from_table(table):
     """Clean the editable table into {ticker: weight %}; duplicate tickers are added together."""
     weights = {}
     for _, row in table.iterrows():
-        tickers = fdata.clean_tickers(str(row.get("Ticker") or ""))
+        raw = row.get("Ticker")
+        tickers = fdata.clean_tickers("" if pd.isna(raw) else str(raw))
         weight = pd.to_numeric(row.get("Weight (%)"), errors="coerce")
         if tickers and pd.notna(weight) and weight > 0:
             weights[tickers[0]] = weights.get(tickers[0], 0) + float(weight)
@@ -100,7 +101,9 @@ def portfolio_builder():
         st.session_state.holdings = pd.DataFrame({"Ticker": list(fdata.DEFAULT_PORTFOLIO),
                                                   "Weight (%)": [float(w) for w in fdata.DEFAULT_PORTFOLIO.values()]})
     if "holdings_editor" not in st.session_state:   # first time on this page: start from the saved table
-        st.session_state.editor_base = st.session_state.holdings.copy()
+        base = st.session_state.holdings.copy()
+        # an empty table comes back with number columns; the editor needs text for tickers
+        st.session_state.editor_base = base.astype({"Ticker": "object", "Weight (%)": "float64"})
     st.caption("Type a ticker and its weight. Add rows at the bottom of the table; select a row to delete it.")
     added = st.session_state.pop("just_added", None)
     if added:
@@ -135,7 +138,7 @@ def portfolio_builder():
         return
     usable = {t: w for t, w in weights.items() if t in ds["tickers"]}
     if not usable:
-        st.error("None of these stocks have enough monthly data to analyze. Check the tickers.")
+        st.error(fdata.no_data_message(ds))
         return
     problems = [c for c in ds["checks"] if c["status"] in ("warn", "fail") and not c["check"].startswith("2.")]
     for c in problems:
