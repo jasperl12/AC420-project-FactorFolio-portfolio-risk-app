@@ -15,8 +15,8 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
 ## Pages
 - **Portfolio Builder (homepage):** inputs, risk score gauge vs. SPY, bear/base/bull projections vs.
   SPY, allocation by stock and sector, fair-value card, and "Balance your risk" suggestions
-- **Risk Deep Dive:** the score part by part, CAPM scatterplot with its OLS line, CAPM vs. Fama-French
-  results with p-values, the R-squared risk split, each stock's beta and R-squared, a size and value
+- **Risk Deep Dive:** the score part by part, CAPM scatterplot with its OLS line, Sharpe ratios vs. SPY,
+  CAPM vs. Fama-French results with p-values, the R-squared risk split, each stock's beta and R-squared, a size and value
   style map, and Altman Z-scores
 - **Projections & Valuation:** all three scenarios at once with what-if controls, DCF values, peer
   comparables, fair-value ranges and implied returns
@@ -40,6 +40,9 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
   looks underpriced, fairly priced or looks overpriced. Never buy or sell.
 - **Financial health:** Altman Z = 1.2 T1 + 1.4 T2 + 3.3 T3 + 0.6 T4 + 0.99 T5 (Lecture 10). Financial
   firms, utilities and real estate are left out because the model was built on manufacturing firms.
+- **Sharpe ratio:** mean(R - rf) / std(R - rf) on the same 60 months, monthly and x sqrt(12) yearly
+  (Lecture 18). Shown for the portfolio, SPY and every stock, but never used in the risk score or to rank
+  suggestions, because a high past Sharpe ratio doesn't predict a high future one.
 - **Suggestions:** each candidate is tested as 10% of the portfolio (0.9 x your returns + 0.1 x the
   stock's), rescored, and ranked by distance to your comfort band, sectors you don't own, then
   fair-value upside.
@@ -57,8 +60,8 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
 ## Testing
 - `notebooks/known_answer_tests.ipynb` checks the code against answers from class: Lecture 12 & 13 CAPM
   and Fama-French (MSFT, XOM), the Lecture 17 merge fix, the Lecture 15 Coca-Cola DCF ($85.91), Lecture 16
-  drills ($64.42; Amazon comps $202.45 and $140.32), the outline's projection example and Lecture 10's GM
-  Altman Z (0.67)
+  drills ($64.42; Amazon comps $202.45 and $140.32), the outline's projection example, Lecture 10's GM
+  Altman Z (0.67) and the Lecture 18 Sharpe ratio examples (0.19 and 0.208)
 - `notebooks/calibration.ipynb` scores SPY, an all-utilities portfolio, three tech stocks and others, and
   checks that a suggestion moves an out-of-band portfolio into or toward its band
 - The app was tested with bad tickers, ETFs, short histories, missing weights, more than 15 stocks and
@@ -94,7 +97,8 @@ streamlit run streamlit_app.py
 ## Code credits
 - Adapted from AC420 class notebooks by Prof. Peter Wysocki: Lecture 3 financial statements, Lecture 10
   Altman Z-score, Lecture 12 & 13 CAPM and Fama-French regressions, Lecture 15 & 16 DCF valuation,
-  Lecture 16 & 17 comparables, Lecture 17 alpha regressions, Lecture 5 Plotly charts, and the Lecture 14
+  Lecture 16 & 17 comparables, Lecture 17 alpha regressions, Lecture 18 Sharpe ratio (Assignment #5),
+  Lecture 5 Plotly charts, and the Lecture 14
   Streamlit starter app (Assignment #4)
 - Written with AI assistance (Claude by Anthropic); my AI usage log records how AI helped with each part
 

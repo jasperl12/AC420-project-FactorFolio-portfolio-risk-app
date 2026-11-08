@@ -66,7 +66,7 @@ def candidate_stats():
         rows.append({"ticker": t, "name": info.at[t, "name"], "sector": info.at[t, "sector"],
                      "industry": info.at[t, "industry"], "price": price, "beta": res["beta"], "r2": res["r2"],
                      "s": res["s"], "h": res["h"], "alpha": res["alpha"], "alpha_p": res["alpha_p"],
-                     "volatility": res["volatility"], "zone": zone,
+                     "volatility": res["volatility"], "sharpe": res["sharpe"], "zone": zone,
                      "style": ("Small" if res["s"] > 0 else "Large") + " " + ("value" if res["h"] > 0 else "growth")})
     return pd.DataFrame(rows).set_index("ticker"), window
 

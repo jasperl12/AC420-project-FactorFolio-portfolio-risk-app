@@ -122,10 +122,13 @@ else:
         "Upside": ["n/a" if pd.isna(u) else f"{u:.0%}" for u in view["upside"]],
         "Label": view["label"].values,
         "R²": view["r2"].round(2).values,
+        "Sharpe": view["sharpe"].round(2).values,
         "Style": view["style"].values,
         "Name": view["name"].values,
     })
     st.write("Select rows in the table, then add them to your portfolio at 10% each.")
+    st.caption("Sharpe is each stock's past monthly return per unit of risk (Lecture 18). Ideas are not ranked "
+               "by it, because a high past Sharpe ratio doesn't predict a high future one.")
     event = st.dataframe(table, hide_index=True, width="stretch", on_select="rerun",
                          selection_mode="multi-row", key="ideas_table")
     picked = [table.iloc[i]["Stock"] for i in event.selection.rows]

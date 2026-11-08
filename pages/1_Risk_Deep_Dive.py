@@ -1,7 +1,7 @@
 # FactorFolio - Risk Deep Dive page (Build Guide Step 7; outline section 4)
 # The math behind the homepage risk score: the score's four parts, the CAPM scatterplot and
-# regression results (Lectures 12, 13 and 17), the R-squared risk split, each stock's beta and
-# R-squared, the Fama-French style map, and Altman Z-scores (Lecture 10).
+# regression results (Lectures 12, 13 and 17), the Sharpe ratio (Lecture 18), the R-squared risk
+# split, each stock's beta and R-squared, the Fama-French style map, and Altman Z-scores (Lecture 10).
 # Layout follows the Lecture 14 streamlit_app.py (st.tabs); charts use Plotly Express (Lecture 5).
 import pandas as pd
 import plotly.express as px
@@ -119,6 +119,34 @@ with tabs[1]:
                  "Its intercept is alpha: the average monthly return the market doesn't explain. Following "
                  "Lecture 17, alpha only counts as real when its p-value is below 0.05; otherwise it could be luck.")
 
+    st.subheader("Sharpe ratio: return per unit of risk")
+    shown = {"Your portfolio": port}
+    if pick not in ("Your portfolio", "SPY"):
+        shown[pick] = res
+    if result["benchmark"]:
+        shown["SPY"] = result["benchmark"]
+    cols = st.columns(len(shown))
+    for col, (name, r) in zip(cols, shown.items()):
+        col.metric(f"{name} (monthly)", f"{r['sharpe']:.2f}")
+    who = "your portfolio" if pick in ("Your portfolio", "SPY") else pick
+    focus = shown["Your portfolio"] if who == "your portfolio" else res
+    vs_spy = f", vs. {result['benchmark']['sharpe']:.2f} for SPY" if result["benchmark"] else ""
+    st.write(f"Over the last {focus['n_months']} months, {who} earned {focus['sharpe']:.2f} of extra return "
+             f"(above the risk-free rate) for every unit of risk{vs_spy}. Higher is better, but a high past "
+             "Sharpe ratio doesn't predict a high future one (Lecture 18).")
+    st.caption("Yearly versions (monthly × √12): " +
+               ", ".join(f"{name} {r['sharpe_annual']:.2f}" for name, r in shown.items()) + ".")
+    with st.expander("What does this mean?"):
+        st.write("The Sharpe ratio (Lecture 18) is the average monthly return above the risk-free rate divided by "
+                 "how much that return bounces around: mean(R - rf) / std(R - rf). It lets you compare a calm "
+                 "investment with a wild one fairly. A negative Sharpe ratio means it did worse than the "
+                 "risk-free rate. FactorFolio uses Ken French's monthly risk-free rate, which changes every month, "
+                 "so it divides by the standard deviation of the excess returns, as on the Lecture 18 slide.")
+        st.write("Why FactorFolio shows it but never chases it: try enough stocks or strategies and the best past "
+                 "Sharpe ratio looks great by luck alone (after 1,000 tries, the expected best is about 3.26 even "
+                 "with zero skill), and past Sharpe ratios were unrelated to future ones in Lecture 18's "
+                 "out-of-sample test. So the risk score and the stock suggestions don't use it.")
+
     st.subheader("CAPM vs. Fama-French 3-factor")
     capm_m, ff3_m = res["capm"]["model"], res["ff3"]["model"]
 
@@ -179,6 +207,7 @@ with tabs[2]:
         "Alpha / month": [pct(a, 2) for a in stocks["alpha"]],
         "Alpha p": [num(p) for p in stocks["alpha_p"]],
         "Monthly volatility": [pct(v) for v in stocks["volatility"]],
+        "Sharpe (monthly)": [num(v) for v in stocks["sharpe"]],
     })
     st.dataframe(each, hide_index=True, width="stretch")
     low_r2 = [t for t, r in stocks["r2"].items() if r < 0.20]

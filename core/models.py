@@ -8,6 +8,7 @@ Adapted from the AC420 class notebooks (Prof. Wysocki):
   model.pvalues and model.rsquared so many stocks can be compared in one table
 - Lecture 12 study guide (4.7): Var(R) = beta^2 x Var(Mkt) + Var(e), so R-squared is the
   systematic share of risk and 1 - R-squared is the firm-specific share
+- Lecture 18: Sharpe ratio = mean(R - rf) / std(R - rf), return per unit of risk
 
 Known-answer tests are in notebooks/known_answer_tests.ipynb.
 """
@@ -117,6 +118,19 @@ def portfolio_returns(window, weights):
     return stock_returns.mul(w, axis=1).sum(axis=1).rename("PORTFOLIO"), w
 
 
+def sharpe_ratio(returns, rf):
+    """Lecture 18 Sharpe ratio: mean(R - rf) / std(R - rf), monthly, plus the yearly version (x sqrt 12).
+
+    The Assignment #5 notebook divides by returns.std() with a constant rf of 0.25% a month; that is
+    the same number only when rf never changes. Ken French's monthly rf changes every month, so this
+    uses the standard deviation of the excess returns, the formula on the Lecture 18 slide.
+    It describes the past only: Lecture 18 shows a high past Sharpe ratio doesn't predict a high future one.
+    """
+    excess = (pd.Series(returns) - pd.Series(rf)).dropna()
+    monthly = excess.mean() / excess.std()
+    return {"monthly": monthly, "annual": monthly * 12 ** 0.5}
+
+
 def analyze_stock(window, col):
     """CAPM, FF3 and the risk split for one return column of the data window."""
     data = window[[col] + FF3_FACTORS + ["rf"]].dropna()
@@ -124,6 +138,7 @@ def analyze_stock(window, col):
     capm = run_capm(y, data["mktrf"])
     ff3 = run_ff3(y, data)
     split = risk_split(capm)
+    sharpe = sharpe_ratio(data[col], data["rf"])
     return {
         "n_months": capm["n_months"],
         "alpha": capm["alpha"], "alpha_p": capm["alpha_p"],
@@ -133,12 +148,13 @@ def analyze_stock(window, col):
         "ff3_r2": ff3["r2"], "ff3_adj_r2": ff3["adj_r2"],
         "volatility": data[col].std(),               # monthly standard deviation
         "firm_specific": split["firm_specific_share"],
+        "sharpe": sharpe["monthly"], "sharpe_annual": sharpe["annual"],   # Lecture 18, past only
         "capm": capm, "ff3": ff3, "split": split,
     }
 
 
 SUMMARY_COLS = ["n_months", "alpha", "alpha_p", "beta", "r2", "ff3_alpha", "ff3_alpha_p",
-                "ff3_beta", "s", "h", "ff3_r2", "ff3_adj_r2", "volatility", "firm_specific"]
+                "ff3_beta", "s", "h", "ff3_r2", "ff3_adj_r2", "volatility", "firm_specific", "sharpe"]
 
 
 def analyze_portfolio(ds, weights, benchmark="SPY"):
