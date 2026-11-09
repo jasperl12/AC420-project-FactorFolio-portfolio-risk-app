@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from core import data as fdata
-from core import models, projections, valuation
+from core import models, projections, theme, valuation
 
 st.set_page_config(page_title="Projections & Valuation | FactorFolio", layout="centered")
 st.title("Projections & Valuation")
@@ -287,7 +287,7 @@ with tabs[3]:
                     hovertemplate="%{y}: $%{customdata[0]:,.2f} to $%{customdata[1]:,.2f}"
                                   " (price $%{customdata[2]:,.2f})<extra></extra>"))
         fig.add_vrect(x0=-0.05, x1=0.05, fillcolor="#9ca3af", opacity=0.15, line_width=0)
-        fig.add_vline(x=0, line_color="#111827", annotation_text="today's price", annotation_position="bottom right")
+        fig.add_vline(x=0, line_color=theme.colors()["ink"], annotation_text="today's price", annotation_position="bottom right")
         fig.update_layout(height=120 + 45 * len(valued), margin=dict(l=10, r=10, t=30, b=10),
                           xaxis_tickformat=".0%", xaxis_title="Fair value vs. today's price",
                           legend=dict(orientation="h", x=0, y=-0.35), barmode="overlay")

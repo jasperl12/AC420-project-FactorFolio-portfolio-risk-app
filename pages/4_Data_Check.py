@@ -9,7 +9,7 @@ import streamlit as st
 from matplotlib.ticker import PercentFormatter
 
 from core import data as fdata
-from core import projections, yahoo
+from core import projections, theme, yahoo
 
 st.set_page_config(page_title="Data Check | FactorFolio", layout="centered")
 st.title("Data Check")
@@ -72,15 +72,19 @@ st.caption("std is each stock's monthly volatility, one of the risk score's inpu
 
 # 5. Boxplot and extreme months (1.5 x IQR rule)
 st.subheader("5. Boxplot of monthly returns")
-fig, ax = plt.subplots(figsize=(7, 4))
-ax.boxplot([returns_window[c].dropna() for c in cols], whis=1.5)
-ax.set_xticks(range(1, len(cols) + 1))
-ax.set_xticklabels(cols)
-ax.axhline(0, color="grey", linewidth=0.8)
-ax.yaxis.set_major_formatter(PercentFormatter(1.0))
-ax.set_ylabel("Monthly return")
-st.pyplot(fig)
-plt.close(fig)
+style = "dark_background" if theme.is_dark() else "default"   # matplotlib draws an image, so match the theme
+with plt.style.context(style):
+    fig, ax = plt.subplots(figsize=(7, 4))
+    fig.patch.set_alpha(0)        # see-through background blends into the page in light or dark mode
+    ax.set_facecolor("none")
+    ax.boxplot([returns_window[c].dropna() for c in cols], whis=1.5)
+    ax.set_xticks(range(1, len(cols) + 1))
+    ax.set_xticklabels(cols)
+    ax.axhline(0, color="grey", linewidth=0.8)
+    ax.yaxis.set_major_formatter(PercentFormatter(1.0))
+    ax.set_ylabel("Monthly return")
+    st.pyplot(fig)
+    plt.close(fig)
 outliers = ds["outliers"]
 if outliers.empty:
     st.write("No months fall outside the whiskers.")

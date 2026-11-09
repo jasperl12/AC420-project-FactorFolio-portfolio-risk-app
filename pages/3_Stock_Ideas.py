@@ -7,7 +7,7 @@ import plotly.express as px
 import streamlit as st
 
 from core import data as fdata
-from core import models, projections, scoring, suggestions, yahoo
+from core import models, projections, scoring, suggestions, theme, yahoo
 
 st.set_page_config(page_title="Stock Ideas | FactorFolio", layout="centered")
 st.title("Stock Ideas")
@@ -104,7 +104,7 @@ else:
     if not mine.empty:
         fig.add_scatter(x=mine["beta"], y=mine["upside"].fillna(0).clip(-1, 1.5), mode="markers+text",
                         text=list(mine.index), textposition="top center", name="You own",
-                        marker=dict(symbol="star", size=13, color="#111827"))
+                        marker=dict(symbol="star", size=13, color=theme.colors()["ink"]))
     fig.add_hline(y=0, line_color="#9ca3af")
     fig.update_layout(height=420, margin=dict(l=10, r=10, t=10, b=10), yaxis_tickformat=".0%",
                       legend=dict(orientation="h", y=-0.25, x=0, title_text=""))

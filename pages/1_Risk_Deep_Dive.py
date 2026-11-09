@@ -8,7 +8,7 @@ import plotly.express as px
 import streamlit as st
 
 from core import data as fdata
-from core import models, scoring, yahoo
+from core import models, scoring, theme, yahoo
 
 st.set_page_config(page_title="Risk Deep Dive | FactorFolio", layout="centered")
 st.title("Risk Deep Dive")
@@ -195,7 +195,7 @@ with tabs[2]:
     fig.add_vline(x=1, line_dash="dot", line_color="#6b7280", annotation_text="market beta = 1",
                   annotation_position="bottom right")
     fig.add_scatter(x=[port["beta"]], y=[port["r2"]], mode="markers+text", text=["Portfolio"],
-                    textposition="middle right", marker=dict(symbol="star", size=16, color="#111827"),
+                    textposition="middle right", marker=dict(symbol="star", size=16, color=theme.colors()["ink"]),
                     showlegend=False)
     fig.update_layout(height=380, margin=dict(l=10, r=10, t=10, b=10), yaxis_tickformat=".0%")
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
@@ -238,7 +238,7 @@ with tabs[3]:
     fig.add_hline(y=0, line_color="#9ca3af")
     fig.add_vline(x=0, line_color="#9ca3af")
     fig.add_scatter(x=[port["h"]], y=[port["s"]], mode="markers+text", text=["Portfolio"],
-                    textposition="middle right", marker=dict(symbol="star", size=16, color="#111827"),
+                    textposition="middle right", marker=dict(symbol="star", size=16, color=theme.colors()["ink"]),
                     showlegend=False)
     xs = [abs(v) for v in list(sdf["h"]) + [port["h"]]] + [0.3]
     ys = [abs(v) for v in list(sdf["s"]) + [port["s"]]] + [0.3]

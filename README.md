@@ -6,15 +6,20 @@ Live app: https://ac420-factorfolio-jasperlin.streamlit.app
 AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), individual project by Jasper Lin.
 
 ## How to use
-1. On the **Portfolio Builder** homepage, enter how much you'd invest, for how many years, your comfort
-   with risk, and your stocks and weights (up to 15).
-2. Read the 0 to 100 risk score in plain English and try the bear, base and bull buttons.
-3. Check the fair-value card, and add a suggested stock if your score is outside your comfort level.
+1. On the **Portfolio Builder** dashboard, use the control bar at the top: how much you'd invest, for how
+   many years, your comfort with risk, and **Edit stocks** for your stocks and weights (up to 15).
+2. Read the four KPI cards (risk score, value in N years vs. SPY, Sharpe ratio, fair value) and the
+   plain-English line under them; try the bear, base and bull buttons on the growth card.
+3. Open any card's "What does this mean?" button for the explanation, and add a suggested stock if your
+   score is outside your comfort level.
 4. Use the sidebar pages for the math, valuations, more stock ideas and the data behind it all.
+5. Flip the **Dark mode** switch (next to the title, or in the sidebar on other pages) for a dark theme.
 
 ## Pages
-- **Portfolio Builder (homepage):** inputs, risk score gauge vs. SPY, bear/base/bull projections vs.
-  SPY, allocation by stock and sector, fair-value card, and "Balance your risk" suggestions
+- **Portfolio Builder (homepage dashboard):** a control bar for the inputs, four KPI cards, a 2 x 2 grid
+  (risk score gauge vs. SPY, bear/base/bull growth vs. SPY, allocation by stock and sector, fair-value
+  check) with explanations behind "What does this mean?" buttons, and "Balance your risk" suggestions
+  with Add buttons when the score is outside your comfort level
 - **Risk Deep Dive:** the score part by part, CAPM scatterplot with its OLS line, Sharpe ratios vs. SPY,
   CAPM vs. Fama-French results with p-values, the R-squared risk split, each stock's beta and R-squared, a size and value
   style map, and Altman Z-scores
@@ -73,6 +78,8 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
 - Altman Z is a screening tool built on manufacturing firms, not a verdict
 - Projections are scenarios, not predictions, and leave out past alpha by default
 - Analyst forecasts can come from a backup up to a week or two old when Yahoo refuses live requests
+- The Dark mode switch reloads the page, because Streamlit can't change the theme from Python; your
+  inputs come back from a browser cookie that expires after 2 minutes
 
 ## Keeping the data fresh
 - Every week or so, and before a demo: run `notebooks/yahoo_backup.ipynb` in Colab and upload the two
@@ -89,8 +96,9 @@ streamlit run streamlit_app.py
 ## Repo layout
 - `streamlit_app.py`: homepage (Portfolio Builder) and page navigation
 - `pages/`: Risk Deep Dive, Projections & Valuation, Stock Ideas, Data Check
-- `core/`: calculations (`data`, `models`, `scoring`, `projections`, `valuation`, `suggestions`) and
-  `yahoo.py`, which handles Yahoo lookups that can be refused on Streamlit Cloud
+- `core/`: calculations (`data`, `models`, `scoring`, `projections`, `valuation`, `suggestions`),
+  `yahoo.py`, which handles Yahoo lookups that can be refused on Streamlit Cloud, and `theme.py`, the
+  light/dark switch and theme-aware chart colors
 - `data/`: small CSV files the app reads (see `data/README.md`)
 - `notebooks/`: offline training (`training_wrds`), known-answer tests, calibration and the Yahoo backup
 
@@ -100,6 +108,9 @@ streamlit run streamlit_app.py
   Lecture 16 & 17 comparables, Lecture 17 alpha regressions, Lecture 18 Sharpe ratio (Assignment #5),
   Lecture 5 Plotly charts, and the Lecture 14
   Streamlit starter app (Assignment #4)
+- Dashboard layout and the light/dark switch use Streamlit's documented `st.popover`,
+  `st.segmented_control`, bordered `st.container`, `st.metric(border=True)`, `st.context` and
+  `st.html`; the switch stores the same theme choice as Streamlit's own Settings menu
 - Written with AI assistance (Claude by Anthropic); my AI usage log records how AI helped with each part
 
 For education only, not investment advice.
