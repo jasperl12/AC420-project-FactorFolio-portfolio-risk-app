@@ -102,14 +102,33 @@ with tabs[0]:
             long.append(pd.DataFrame({"Year": p["path"]["Year"], "Value": p["path"][series],
                                       "Scenario": s, "Series": series}))
     long = pd.concat(long)
-    fig = px.line(long, x="Year", y="Value", color="Scenario", line_dash="Series", markers=True,
-                  color_discrete_map=SCENARIO_COLORS, line_dash_map={"Your portfolio": "solid", "SPY": "dot"})
-    fig.update_layout(height=360, margin=dict(l=10, r=10, t=30, b=10), yaxis_tickprefix="$",
-                      yaxis_tickformat=",.0f", yaxis_title="Value ($)", legend_title_text="",
-                      legend=dict(orientation="h", x=0, y=1.15))
-    fig.update_xaxes(dtick=1)
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-    st.caption("Solid lines: your portfolio. Dotted lines: the same money in SPY.")
+
+    # Six checkboxes pick which lines to draw. Six lines at once is cluttered, so the default shows your
+    # portfolio in all three scenarios plus SPY in the base case as the yardstick.
+    shown = []
+    for series, label in [("Your portfolio", "Your portfolio"), ("SPY", "SPY (dotted)")]:
+        with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
+            st.markdown(f"**{label}:**")
+            for s in projections.SCENARIOS:
+                key = f"show_{'port' if series == 'Your portfolio' else 'spy'}_{s.lower()}"
+                default = series == "Your portfolio" or s == "Base"
+                if st.checkbox(s, value=remember(key, default), key=key):
+                    shown.append((s, series))
+                st.session_state[f"saved_{key}"] = st.session_state[key]   # keep the choice across pages
+    if not shown:
+        st.info("Tick at least one box to show a line.")
+    else:
+        picked = pd.MultiIndex.from_frame(long[["Scenario", "Series"]]).isin(shown)
+        fig = px.line(long[picked], x="Year", y="Value", color="Scenario", line_dash="Series", markers=True,
+                      color_discrete_map=SCENARIO_COLORS,
+                      line_dash_map={"Your portfolio": "solid", "SPY": "dot"})
+        fig.update_layout(height=360, margin=dict(l=10, r=10, t=30, b=10), yaxis_tickprefix="$",
+                          yaxis_tickformat=",.0f", yaxis_title="Value ($)", legend_title_text="",
+                          legend=dict(orientation="h", x=0, y=1.15))
+        fig.update_xaxes(dtick=1)
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.caption("Solid lines: your portfolio. Dotted lines: the same money in SPY. Colors: red bear, "
+                   "blue base, green bull.")
 
     summary = pd.DataFrame([{"Scenario": s, "Your portfolio": money(p["portfolio_value"], 0),
                              "SPY": money(p["spy_value"], 0),
