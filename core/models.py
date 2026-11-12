@@ -43,7 +43,8 @@ def run_capm(y, mktrf):
         "beta": model.params["mktrf"],
         "beta_t": model.tvalues["mktrf"],
         "beta_p": model.pvalues["mktrf"],
-        "beta_ci": tuple(model.conf_int().loc["mktrf"]),
+        "beta_se": model.bse["mktrf"],
+        "beta_ci": tuple(model.conf_int().loc["mktrf"]),   # 95% confidence interval: beta +/- about 2 SE
         "r2": model.rsquared,
         "adj_r2": model.rsquared_adj,
         "model": model,
@@ -67,6 +68,7 @@ def run_ff3(y, factors):
         "s": model.params["smb"],
         "h": model.params["hml"],
         "beta_p": model.pvalues["mktrf"],
+        "beta_ci": tuple(model.conf_int().loc["mktrf"]),
         "s_p": model.pvalues["smb"],
         "h_p": model.pvalues["hml"],
         "r2": model.rsquared,
@@ -143,8 +145,10 @@ def analyze_stock(window, col):
         "n_months": capm["n_months"],
         "alpha": capm["alpha"], "alpha_p": capm["alpha_p"],
         "beta": capm["beta"], "r2": capm["r2"],
+        "beta_low": capm["beta_ci"][0], "beta_high": capm["beta_ci"][1],   # 95% confidence interval
         "ff3_alpha": ff3["alpha"], "ff3_alpha_p": ff3["alpha_p"],
         "ff3_beta": ff3["beta"], "s": ff3["s"], "h": ff3["h"],
+        "ff3_beta_low": ff3["beta_ci"][0], "ff3_beta_high": ff3["beta_ci"][1],
         "ff3_r2": ff3["r2"], "ff3_adj_r2": ff3["adj_r2"],
         "volatility": data[col].std(),               # monthly standard deviation
         "firm_specific": split["firm_specific_share"],

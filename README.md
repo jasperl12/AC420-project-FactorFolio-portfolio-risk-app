@@ -23,7 +23,8 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
 - **Risk Deep Dive:** the score part by part, CAPM scatterplot with its OLS line, Sharpe ratios vs. SPY,
   CAPM vs. Fama-French results with p-values, the R-squared risk split, each stock's beta and R-squared, a size and value
   style map, and Altman Z-scores
-- **Projections & Valuation:** all three scenarios at once with what-if controls, DCF values, peer
+- **Projections & Valuation:** all three scenarios at once with what-if controls, the worst, most likely
+  and best case from a range for beta, DCF values, peer
   comparables, fair-value ranges and implied returns
 - **Stock Ideas:** every S&P 100 stock tested as a 10% addition, with filters and Add buttons
 - **Data Check:** the hygiene checklist, raw returns, summary statistics, a boxplot of extreme months,
@@ -38,7 +39,9 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
   the factors on year-month (Lectures 12, 13 and 17). Alpha only counts when p < 0.05.
 - **Projections:** CAPM expected return, risk-free rate + beta x (market return - risk-free rate), with
   the market at its 25th percentile (bear), risk-free rate + 5.7% (base) or 75th percentile (bull) in
-  year 1, then the base return; SPY earns the market return (Lectures 14 and 15).
+  year 1, then the base return; SPY earns the market return (Lectures 14 and 15). Because beta is an
+  estimate, the regression's 95% confidence interval (beta +/- about 2 standard errors) gives a low and a
+  high beta; running every scenario with each one gives a worst, most likely and best case.
 - **Fair value:** the Lecture 15 & 16 three-part DCF (analyst EPS for this year and next, CAPM cost of
   equity, long-term growth of 2%, 3% or 4%) and peer comparables (median P/E of similar S&P 100 stocks x
   next-year EPS, Lectures 16 & 17). Each stock gets a range from one to the other and a 5% band label:
@@ -66,7 +69,8 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
 - `notebooks/known_answer_tests.ipynb` checks the code against answers from class: Lecture 12 & 13 CAPM
   and Fama-French (MSFT, XOM), the Lecture 17 merge fix, the Lecture 15 Coca-Cola DCF ($85.91), Lecture 16
   drills ($64.42; Amazon comps $202.45 and $140.32), the outline's projection example, Lecture 10's GM
-  Altman Z (0.67) and the Lecture 18 Sharpe ratio examples (0.19 and 0.208)
+  Altman Z (0.67), the Lecture 18 Sharpe ratio examples (0.19 and 0.208) and the beta range (the
+  confidence interval equals beta +/- t x standard error; worst, most likely and best case checked by hand)
 - `notebooks/calibration.ipynb` scores SPY, an all-utilities portfolio, three tech stocks and others, and
   checks that a suggestion moves an out-of-band portfolio into or toward its band
 - The app was tested with bad tickers, ETFs, short histories, missing weights, more than 15 stocks and

@@ -136,3 +136,18 @@ def restore_after_reload():
                 weights[clean[0]] = weights.get(clean[0], 0) + float(w)
         if weights:
             st.session_state.portfolio = weights      # the other pages read this
+
+
+CASE_COLORS = {"(worst)": "rgba(239, 68, 68, 0.22)", "(most likely)": "rgba(59, 130, 246, 0.22)",
+               "(best)": "rgba(34, 197, 94, 0.22)"}
+
+
+def highlight_cases(table):
+    """Shade the worst, most likely and best cells of the beta range table (see-through, so it works
+    in light and dark mode). The words in the cells say the same thing for anyone who can't see color."""
+    def shade(value):
+        for mark, color in CASE_COLORS.items():
+            if isinstance(value, str) and value.endswith(mark):
+                return f"background-color: {color}"
+        return ""
+    return table.style.map(shade)

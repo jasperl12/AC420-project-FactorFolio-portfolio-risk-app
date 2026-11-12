@@ -218,8 +218,8 @@ def portfolio_builder():
     k2.metric(f"In {horizon} years ({scenario.lower()} case)", f"${proj['portfolio_value']:,.0f}",
               "about the same as SPY" if tie else f"{signed_money(proj['difference'])} vs. SPY",
               delta_color="off" if tie else "normal", delta_arrow="off" if tie else "auto", border=True,
-              help=f"What ${amount:,.0f} could grow to, from the CAPM and the {scenario.lower()} market scenario. "
-                   f"SPY would reach ${proj['spy_value']:,.0f}. A scenario, not a prediction.")
+              help=(f"What ${amount:,.0f} could grow to, from the CAPM and the {scenario.lower()} market scenario. "
+                    f"SPY would reach ${proj['spy_value']:,.0f}. A scenario, not a prediction.").replace("$", "\\$"))
     spy_sharpe = f"SPY {result['benchmark']['sharpe_annual']:.2f}" if result["benchmark"] else None
     k3.metric("Sharpe ratio (past 5 years)", f"{port['sharpe_annual']:.2f}", spy_sharpe, delta_color="gray",
               delta_arrow="off", border=True,
@@ -276,6 +276,11 @@ def portfolio_builder():
             st.warning(rf["note"])
         st.plotly_chart(growth_chart(proj["path"]), width="stretch", config=CHART_CONFIG)
         st.caption(projections.SCENARIO_HELP[scenario])
+        # beta is an estimate, so show what its 95% confidence interval means for the outcome
+        br = projections.beta_range(amount, horizon, port["beta"], port["beta_low"], port["beta_high"], rf["rf"])
+        st.caption(f":material/swap_vert: **Range for your beta** ({port['beta_low']:.2f} to {port['beta_high']:.2f}): "
+                   f"worst \\${br['worst']['value']:,.0f}, most likely \\${br['likely']['value']:,.0f}, "
+                   f"best \\${br['best']['value']:,.0f} in {horizon} year{'s' if horizon > 1 else ''}.")
         if abs(port["beta"] - 1) < 0.1:
             move_word = "about as much as"
         else:
@@ -290,6 +295,11 @@ def portfolio_builder():
             st.write("After the first year, both go back to the base return for the rest of the time horizon. "
                      "Past alpha is left out because it may not repeat (Lecture 12).")
             st.dataframe(projections.assumptions_table(proj), hide_index=True, width="stretch")
+            st.markdown("**Worst, most likely and best case**")
+            st.write(f"Your beta of {port['beta']:.2f} is an estimate from {port['n_months']} months, so the "
+                     f"regression's 95% confidence interval ({port['beta_low']:.2f} to {port['beta_high']:.2f}) gives "
+                     "a low and a high beta. Each cell is your portfolio's value at the end of your time horizon.")
+            st.dataframe(theme.highlight_cases(projections.beta_range_table(br)), hide_index=True, width="stretch")
             st.caption(f"Risk-free rate: {rf['note']} Equity risk premium: {projections.ERP:.1%} (Lecture 15). "
                        "Bear and bull: the 25th and 75th percentiles of annual U.S. market returns from 1927 to "
                        "2025 (Ken French Data Library). These are scenarios, not predictions.")

@@ -136,6 +136,36 @@ with tabs[0]:
                             for s, p in projs.items()])
     st.dataframe(summary, hide_index=True, width="stretch")
 
+    # Professor's check-in feedback: beta is an estimate, so show a range for it and the worst, most
+    # likely and best case it leads to. The low and high beta are the regression's 95% confidence interval.
+    st.subheader("Worst, most likely and best case")
+    if model_name == "CAPM":
+        beta_low, beta_high = port["beta_low"], port["beta_high"]
+    else:
+        beta_low, beta_high = port["ff3_beta_low"], port["ff3_beta_high"]
+    br = projections.beta_range(amount, horizon, beta, beta_low, beta_high, rf, erp=erp, every_year=every_year,
+                                extra=extra)
+    case_cols = st.columns(3)
+    for col, key, title, color in zip(case_cols, ["worst", "likely", "best"],
+                                      ["Worst case", "Most likely", "Best case"], ["red", "blue", "green"]):
+        case = br[key]
+        beta_words = {"Low beta": "low beta", "Most likely beta": "estimated beta", "High beta": "high beta"}
+        col.metric(title, money(case["value"], 0),
+                   f"{case['scenario'].lower()} market, {beta_words[case['row']]} {br['betas'][case['row']]:.2f}",
+                   delta_color=color, delta_arrow="off", border=True)
+    st.dataframe(theme.highlight_cases(projections.beta_range_table(br)), hide_index=True, width="stretch")
+    st.caption(f"Beta is an estimate from {port['n_months']} months of data, so the low and high beta are the "
+               f"regression's 95% confidence interval ({beta_low:.2f} to {beta_high:.2f}, about beta ± 2 standard "
+               f"errors, from statsmodels' conf_int()). Each cell is your portfolio's value in {horizon} "
+               f"year{'s' if horizon > 1 else ''}. Most likely: the base market with your estimated beta; worst and "
+               "best: the lowest and highest cells.")
+    if br["worst"]["row"] == "Low beta" and not every_year:
+        st.caption("Why is the low beta the worst case? Only year 1 is a bear year. The base years after it reward "
+                   "market risk (the CAPM's more risk, more expected return), so over several years a lower beta "
+                   "ends lower. With a 1-year horizon, a high beta would be the worst case in a bear market.")
+    elif br["worst"]["row"] == "High beta":
+        st.caption("In a bear market a higher beta falls further, so the high beta is the worst case here.")
+
     st.subheader("Assumptions")
     market = projs["Base"]["market"]
     sources = {"Bear": "25th percentile, 1927 to 2025", "Base": f"Rf {rf:.2%} + ERP {erp:.1%}",

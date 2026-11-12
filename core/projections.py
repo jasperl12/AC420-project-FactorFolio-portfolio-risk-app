@@ -130,6 +130,47 @@ def project(amount, years, beta, rf, scenario, erp=ERP, every_year=False, scenar
     }
 
 
+BETA_ROWS = ["Low beta", "Most likely beta", "High beta"]
+
+
+def beta_range(amount, years, beta, beta_low, beta_high, rf, erp=ERP, every_year=False, scenarios=None, extra=0.0):
+    """Worst, most likely and best case: every scenario run with the low, estimated and high beta.
+
+    Beta is an estimate from 60 months, so the regression's 95% confidence interval (beta +/- about 2
+    standard errors, statsmodels conf_int()) gives a low and a high beta. Each of the 9 cells is the
+    portfolio's value after `years`. Most likely = base market with the estimated beta; worst and best
+    = the lowest and highest cells. Which beta is worst depends on the horizon: in a bear year a high beta
+    falls the most, but the base years after it reward a high beta (more risk, more expected return).
+    """
+    betas = dict(zip(BETA_ROWS, [beta_low, beta, beta_high]))
+    grid = pd.DataFrame({s: [project(amount, years, b, rf, s, erp=erp, every_year=every_year,
+                                     scenarios=scenarios, extra=extra)["portfolio_value"]
+                             for b in betas.values()] for s in SCENARIOS}, index=BETA_ROWS)
+    worst_row, worst_col = grid.stack().idxmin()
+    best_row, best_col = grid.stack().idxmax()
+    return {
+        "betas": betas, "grid": grid, "years": years, "amount": amount,
+        "worst": {"value": grid.loc[worst_row, worst_col], "row": worst_row, "scenario": worst_col},
+        "likely": {"value": grid.loc["Most likely beta", "Base"], "row": "Most likely beta", "scenario": "Base"},
+        "best": {"value": grid.loc[best_row, best_col], "row": best_row, "scenario": best_col},
+    }
+
+
+def beta_range_table(r):
+    """The 3 x 3 grid as text for st.dataframe, with the worst, most likely and best cells marked."""
+    marks = {(r["worst"]["row"], r["worst"]["scenario"]): "worst",
+             (r["likely"]["row"], r["likely"]["scenario"]): "most likely",
+             (r["best"]["row"], r["best"]["scenario"]): "best"}
+    rows = []
+    for name, b in r["betas"].items():
+        row = {"Beta": f"{name.replace(' beta', '')} ({b:.2f})"}
+        for s in SCENARIOS:
+            mark = marks.get((name, s))
+            row[f"{s} market"] = f"${r['grid'].loc[name, s]:,.0f}" + (f" ({mark})" if mark else "")
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def assumptions_table(proj):
     """One row per scenario: the year-1 market, portfolio and SPY returns."""
     rows = []
