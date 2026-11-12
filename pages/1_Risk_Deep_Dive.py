@@ -69,7 +69,7 @@ with tabs[0]:
                       xaxis_title="Part score (0 to 100)", yaxis_title="")
     bar.update_yaxes(autorange="reversed")
     bar.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(bar, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(theme.scaled(bar), width="stretch", config={"displayModeBar": False})
     table = parts.assign(**{"Part score": parts["Part score"].round(0).astype(int),
                             "Weight": [f"{w:.0%}" for w in parts["Weight"]],
                             "Points": parts["Points"].round(1)})
@@ -105,7 +105,7 @@ with tabs[1]:
                      hover_data=["Month"], trendline_color_override="#dc2626")
     fig.update_layout(height=360, margin=dict(l=10, r=10, t=10, b=10),
                       xaxis_tickformat=".0%", yaxis_tickformat=".0%")
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(theme.scaled(fig), width="stretch", config={"displayModeBar": False})
     fit = px.get_trendline_results(fig).px_fit_results.iloc[0]
     slope, intercept = fit.params[1], fit.params[0]
     match = "matches" if abs(slope - res["beta"]) < 1e-8 else "does not match"
@@ -177,7 +177,7 @@ with tabs[1]:
                  values=[split["systematic_share"], split["firm_specific_share"]], hole=0.35,
                  color_discrete_sequence=["#2563eb", "#f59e0b"])
     pie.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), legend=dict(orientation="h", y=-0.1))
-    st.plotly_chart(pie, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(theme.scaled(pie), width="stretch", config={"displayModeBar": False})
     with st.expander("What does this mean?"):
         st.write("Total risk splits into two parts (Lecture 12): Var(R) = beta² × Var(market) + Var(company "
                  "news). R² is the market's share and 1 - R² is the company-specific share. Company-specific "
@@ -198,7 +198,7 @@ with tabs[2]:
                     textposition="middle right", marker=dict(symbol="star", size=16, color=theme.colors()["ink"]),
                     showlegend=False)
     fig.update_layout(height=380, margin=dict(l=10, r=10, t=10, b=10), yaxis_tickformat=".0%")
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(theme.scaled(fig), width="stretch", config={"displayModeBar": False})
     each = pd.DataFrame({
         "Stock": stocks.index,
         "Weight": [pct(w, 0) for w in stocks["weight"]],
@@ -248,7 +248,7 @@ with tabs[3]:
         fig.add_annotation(x=x * 0.95, y=y * 0.95, text=label, showarrow=False, font=dict(color="#6b7280"),
                            xanchor="right" if x > 0 else "left", yanchor="top" if y > 0 else "bottom")
     fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), xaxis_range=[-xr, xr], yaxis_range=[-yr, yr])
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(theme.scaled(fig), width="stretch", config={"displayModeBar": False})
     st.dataframe(pd.DataFrame({"Stock": style.index, "Size s": [num(v) for v in style["s"]],
                                "Value h": [num(v) for v in style["h"]], "Style": style["Style"].values,
                                "P/B": [num(v, 1) for v in style["P/B"]]}),
@@ -276,7 +276,7 @@ with tabs[4]:
         zfig.add_hline(y=1.80, line_dash="dot", line_color="#dc2626")
         zfig.add_hline(y=2.99, line_dash="dot", line_color="#16a34a")
         zfig.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), legend_title_text="Zone")
-        st.plotly_chart(zfig, width="stretch", config={"displayModeBar": False})
+        st.plotly_chart(theme.scaled(zfig), width="stretch", config={"displayModeBar": False})
     ztab = pd.DataFrame({
         "Stock": z_table.index,
         "Year end": [d or "n/a" for d in z_table["fiscal_year_end"]],

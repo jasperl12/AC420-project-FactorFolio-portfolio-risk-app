@@ -126,7 +126,7 @@ with tabs[0]:
                           yaxis_tickformat=",.0f", yaxis_title="Value ($)", legend_title_text="",
                           legend=dict(orientation="h", x=0, y=1.15))
         fig.update_xaxes(dtick=1)
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.plotly_chart(theme.scaled(fig), width="stretch", config={"displayModeBar": False})
         st.caption("Solid lines: your portfolio. Dotted lines: the same money in SPY. Colors: red bear, "
                    "blue base, green bull.")
 
@@ -306,7 +306,7 @@ with tabs[2]:
                 box.add_vline(x=row["own_pe"], line_dash="dash", line_color="#2563eb",
                               annotation_text=f"{pick} {row['own_pe']:.1f}")
             box.update_layout(height=200, margin=dict(l=10, r=10, t=30, b=10))
-            st.plotly_chart(box, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(theme.scaled(box), width="stretch", config={"displayModeBar": False})
             st.caption(f"The box shows the peers' P/E ratios (the Lectures 1 to 3 boxplot): a peer far from the "
                        f"others pulls the mean but not the median. Dashed line: {pick}'s own P/E.")
         if pd.notna(row["comps_median"]):
@@ -341,7 +341,7 @@ with tabs[3]:
                           xaxis_tickformat=".0%", xaxis_title="Fair value vs. today's price",
                           legend=dict(orientation="h", x=0, y=-0.35), barmode="overlay")
         fig.update_yaxes(categoryorder="array", categoryarray=list(valued.index), autorange="reversed")
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.plotly_chart(theme.scaled(fig), width="stretch", config={"displayModeBar": False})
         st.caption("Each bar runs from the lower to the higher of the DCF and comparables values, shown as a % "
                    "above or below today's price. The grey band is ±5%. A stock looks underpriced when its price "
                    "is more than 5% below the low end, and overpriced when it is more than 5% above the high end.")

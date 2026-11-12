@@ -12,6 +12,13 @@ st.context.cookies when the new session starts.
 
 Charts use Streamlit's Plotly theme, which already follows light or dark; colors() only swaps the
 few colors that would disappear on a dark background (near-black needles and markers).
+
+Text size (professor's check-in feedback: text may be too small for some users, such as older people).
+The -/+ buttons change the size in 10% steps. Streamlit sizes its text, buttons and spacing in rem
+(multiples of the page's root font size), so changing the root font size scales the whole page the way
+Streamlit's own base font size setting does. Plotly charts are sized in pixels, so scaled() makes their
+fonts and heights bigger to match. (CSS zoom was tested first and rejected: it pushed popovers out of
+place and blanked the charts.)
 """
 import json
 from urllib.parse import unquote
@@ -151,3 +158,79 @@ def highlight_cases(table):
                 return f"background-color: {color}"
         return ""
     return table.style.map(shade)
+
+
+# ---------- Text size ----------
+SCALE_KEY = "saved_text_scale"          # saved_ so it survives page changes and the dark mode reload
+SCALE_MIN, SCALE_MAX, SCALE_STEP = 70, 200, 10
+BASE_FONT_PX = 16                       # Streamlit's root font size at 100%
+
+
+def scale():
+    """The chosen text size as a fraction (1.0 = 100%)."""
+    return st.session_state.get(SCALE_KEY, 100) / 100
+
+
+def _step(delta):
+    now = st.session_state.get(SCALE_KEY, 100)
+    st.session_state[SCALE_KEY] = 100 if delta == 0 else min(SCALE_MAX, max(SCALE_MIN, now + delta))
+
+
+def size_buttons(where=None, key="size"):
+    """The text size control: smaller, the current size (click to reset) and bigger."""
+    where = where or st
+    now = st.session_state.get(SCALE_KEY, 100)
+    with where.container(horizontal=True, vertical_alignment="center", gap="small", width="content"):
+        st.button("−", key=f"{key}_minus", on_click=_step, args=(-SCALE_STEP,), disabled=now <= SCALE_MIN,
+                  help="Smaller text and charts")
+        st.button(f"{now}%", key=f"{key}_reset", on_click=_step, args=(0,), type="tertiary",
+                  help="Text size. Click to go back to 100%.")
+        st.button("+", key=f"{key}_plus", on_click=_step, args=(SCALE_STEP,), disabled=now >= SCALE_MAX,
+                  help="Bigger text and charts")
+
+
+# Extra rules while the text size isn't 100%:
+# - Streamlit's centered pages are 736px wide (46rem at 100%); in rem the column widens with the text
+# - on a phone, titles and big card numbers are capped by the screen width (vw) so a long word like
+#   "FactorFolio" or "Underpriced" fits instead of breaking or being cut off
+# - card labels and the colored notes under card numbers wrap instead of ending in "..."
+SCALE_CSS = """
+[data-testid='stMainBlockContainer'] { max-width: max(46rem, 736px); }
+h1 { font-size: min(2.75rem, 12vw) !important; }
+[data-testid='stMetricValue'] { font-size: min(2.25rem, 11vw) !important; }
+[data-testid='stMetricLabel'] *, [data-testid='stMetricDelta'] * { white-space: normal !important; }
+[data-testid='stButtonGroup'] div:has(> button) { flex-wrap: wrap; }
+"""
+
+
+def apply_scale():
+    """Run on every page: set the root font size so all of Streamlit's text, buttons and spacing scale."""
+    s = scale()
+    if s != 1:
+        # Streamlit's centered pages are 736px wide (46rem at 100%); in rem the column widens with the text
+        st.html(f"<style>html {{ font-size: {BASE_FONT_PX * s:.1f}px !important; }}" + SCALE_CSS + "</style>")
+
+
+def scaled(fig):
+    """Make a Plotly chart's text and height match the text size (Streamlit's chart theme uses 12px for
+    labels and legends and 14px for axis titles). At 100% the chart is left exactly as it was."""
+    s = scale()
+    if s == 1:
+        return fig
+    small, title = round(12 * s, 1), round(14 * s, 1)
+    fig.update_layout(font_size=small, legend_font_size=small, legend_title_font_size=small,
+                      hoverlabel_font_size=small)
+    fig.update_xaxes(tickfont_size=small, title_font_size=title)
+    fig.update_yaxes(tickfont_size=small, title_font_size=title)
+    gauge = any(trace.type == "indicator" for trace in fig.data)
+    if fig.layout.height:            # taller charts; a gauge grows less, since a phone limits its width
+        fig.update_layout(height=round(fig.layout.height * (min(s, 1.3) if gauge else s)))
+    # Bigger margins make room for the bigger labels. A gauge's size is set by the card's width, so on a
+    # phone its margins grow less and its big number stays the same size.
+    grow = min(s, 1.3) if gauge else s
+    m = fig.layout.margin
+    fig.update_layout(margin={k: round(getattr(m, k) * grow) for k in ("l", "r", "t", "b")
+                              if getattr(m, k) is not None})
+    for note in fig.layout.annotations or []:
+        note.font.size = (note.font.size or 12) * s
+    return fig

@@ -21,8 +21,9 @@ MAX_STOCKS = 15
 SECTORS_FILE = fdata.DATA_DIR / "sp100_tickers.csv"
 CHART_CONFIG = {"displayModeBar": False}
 CARD_CHART_HEIGHT = 250
-# keeps the dashboard from stretching too wide on big monitors
-DASHBOARD_CSS = "<style>[data-testid='stMainBlockContainer'] {max-width: 1300px; padding-top: 3rem;}</style>"
+# keeps the dashboard from stretching too wide on big monitors (81rem = 1300px at 100% text size; in rem
+# so the page gets wider as the text gets bigger)
+DASHBOARD_CSS = "<style>[data-testid='stMainBlockContainer'] {max-width: 81rem; padding-top: 3rem;}</style>"
 
 
 def remember(key, default):
@@ -92,6 +93,13 @@ def gauge(score, spy_score):
     return fig
 
 
+def grid_row():
+    """Two cards side by side, or one above the other when the text size is above 130%."""
+    if theme.scale() <= 1.3:
+        return st.columns(2, gap="medium")
+    return st.container(), st.container()
+
+
 def card_header(title, button="What does this mean?"):
     """A card's title on the left and a small button on the right that opens the details."""
     with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
@@ -111,7 +119,7 @@ def stock_editor():
     st.caption(f"Type a ticker and its weight (up to {MAX_STOCKS} stocks). Add rows at the bottom; "
                "select a row to delete it.")
     table = st.data_editor(
-        st.session_state.editor_base, key="holdings_editor", num_rows="dynamic", hide_index=True, width=340,
+        st.session_state.editor_base, key="holdings_editor", num_rows="dynamic", hide_index=True, width=int(340 * theme.scale()),
         column_config={"Ticker": st.column_config.TextColumn("Ticker", help="Yahoo Finance symbol, e.g. AAPL"),
                        "Weight (%)": st.column_config.NumberColumn("Weight (%)", min_value=0.0, max_value=100.0,
                                                                    step=1.0, format="%.1f")})
@@ -122,7 +130,15 @@ def stock_editor():
 def control_bar():
     """The inputs in one bordered row: amount, years, comfort with risk and the stock table."""
     with st.container(border=True):
-        c1, c2, c3, c4 = st.columns([1.1, 1.3, 2.0, 1.0], vertical_alignment="bottom")
+        # bigger text needs more room: one row of four, then two rows, then comfort and stocks on their own rows
+        if theme.scale() <= 1.1:
+            c1, c2, c3, c4 = st.columns([1.1, 1.3, 2.0, 1.0], vertical_alignment="bottom")
+        else:
+            c1, c2 = st.columns(2, vertical_alignment="bottom")
+            if theme.scale() <= 1.5:
+                c3, c4 = st.columns([2, 1], vertical_alignment="bottom")
+            else:
+                c3, c4 = st.container(), st.container()
         amount = c1.number_input("Amount to invest ($)", min_value=100, max_value=10_000_000, step=1_000,
                                  value=remember("amount", 10_000), key="amount")
         horizon = c2.slider("Time horizon (years)", 1, 10, value=remember("horizon", 5), key="horizon")
@@ -156,10 +172,16 @@ def portfolio_builder():
     st.set_page_config(page_title="FactorFolio", layout="wide")
     st.html(DASHBOARD_CSS)
 
-    head, switch = st.columns([5, 1], vertical_alignment="center")
+    if theme.scale() <= 1.3:
+        head, controls = st.columns([3, 2], vertical_alignment="center")
+    else:                             # very large text: the size and dark mode controls go under the title
+        head, controls = st.container(), st.container()
     head.title("FactorFolio", anchor=False)
     head.caption("Build a stock portfolio that matches your comfort with risk, scored in plain English.")
-    with switch.container(horizontal=True, horizontal_alignment="right"):
+    align = "right" if theme.scale() <= 1.3 else "left"
+    with controls.container(horizontal=True, horizontal_alignment=align, vertical_alignment="center", gap="medium"):
+        st.caption("Text size")
+        theme.size_buttons(key="size_home")
         theme.switch(key="theme_home")
 
     amount, horizon, comfort, weights = control_bar()
@@ -207,7 +229,13 @@ def portfolio_builder():
                                  "health": health["points"], "scenario": scenario, "rf": rf["rf"]}
 
     # ---------- KPI row ----------
-    k1, k2, k3, k4 = st.columns(4)
+    if theme.scale() <= 1.0:          # bigger text: a 2 x 2 grid of cards, then one card per row, so nothing is cut off
+        k1, k2, k3, k4 = st.columns(4)
+    elif theme.scale() <= 1.5:
+        k1, k2 = st.columns(2)
+        k3, k4 = st.columns(2)
+    else:
+        k1, k2, k3, k4 = (st.container() for _ in range(4))
     fit_words = {"fits": "Fits your comfort level", "above": "Riskier than your comfort",
                  "below": "Safer than your comfort"}[fit["status"]]
     fit_color = {"fits": "green", "above": "orange", "below": "blue"}[fit["status"]]
@@ -236,10 +264,10 @@ def portfolio_builder():
     ideas_slot = banner.container()
 
     # ---------- Row 1: risk gauge | growth chart ----------
-    left, right = st.columns(2, gap="medium")
+    left, right = grid_row()
     with left.container(border=True, height="stretch"):
         more = card_header("Risk score vs. SPY")
-        st.plotly_chart(gauge(scored["score"], spy["score"] if spy else None), width="stretch",
+        st.plotly_chart(theme.scaled(gauge(scored["score"], spy["score"] if spy else None)), width="stretch",
                         config=CHART_CONFIG)
         if spy:
             st.caption(f"Blue line: SPY scores {spy['score']:.0f}. Green, yellow and red: {scoring.bands_text()}.")
@@ -274,7 +302,7 @@ def portfolio_builder():
         st.session_state.saved_scenario = scenario
         if not rf["ok"]:
             st.warning(rf["note"])
-        st.plotly_chart(growth_chart(proj["path"]), width="stretch", config=CHART_CONFIG)
+        st.plotly_chart(theme.scaled(growth_chart(proj["path"])), width="stretch", config=CHART_CONFIG)
         st.caption(projections.SCENARIO_HELP[scenario])
         # beta is an estimate, so show what its 95% confidence interval means for the outcome
         br = projections.beta_range(amount, horizon, port["beta"], port["beta_low"], port["beta_high"], rf["rf"])
@@ -306,7 +334,7 @@ def portfolio_builder():
             st.page_link("pages/2_Projections_and_Valuation.py", label="Try your own assumptions", icon="📈")
 
     # ---------- Row 2: allocation | fair value ----------
-    left, right = st.columns(2, gap="medium")
+    left, right = grid_row()
     sectors = sector_lookup()
     w = result["weights"]
     alloc = pd.DataFrame({"Ticker": w.index, "Weight": w.values,
@@ -318,7 +346,7 @@ def portfolio_builder():
         pie = px.pie(alloc, names="Ticker", values="Weight", hole=0.4, hover_data=["Amount", "Sector"])
         pie.update_traces(textinfo="label+percent")
         pie.update_layout(height=CARD_CHART_HEIGHT, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
-        st.plotly_chart(pie, width="stretch", config=CHART_CONFIG)
+        st.plotly_chart(theme.scaled(pie), width="stretch", config=CHART_CONFIG)
         st.caption("By sector: " + ", ".join(f"{s} {v:.0%}" for s, v in by_sector.items()))
         if by_sector.iloc[0] > 0.5:
             st.caption(f":orange[:material/warning:] Over half of your money is in one sector "
@@ -423,6 +451,9 @@ pages = [
 theme.restore_after_reload()                      # inputs saved just before a light/dark switch
 theme.apply_request([p.url_path for p in pages])  # the switch was flipped: save, store the theme, reload
 page = st.navigation(pages)
-if page.url_path != "":                           # the homepage has its own switch next to the title
+theme.apply_scale()                               # the text size chosen with the - / + buttons
+if page.url_path != "":                           # the homepage has its own controls next to the title
+    st.sidebar.caption("Text size")
+    theme.size_buttons(st.sidebar, key="size_sidebar")
     theme.switch(st.sidebar, key="theme_sidebar")
 page.run()

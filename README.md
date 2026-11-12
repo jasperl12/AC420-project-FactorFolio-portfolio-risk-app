@@ -13,7 +13,8 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
 3. Open any card's "What does this mean?" button for the explanation, and add a suggested stock if your
    score is outside your comfort level.
 4. Use the sidebar pages for the math, valuations, more stock ideas and the data behind it all.
-5. Flip the **Dark mode** switch (next to the title, or in the sidebar on other pages) for a dark theme.
+5. Use **Text size** (- and +, in 10% steps from 70% to 200%) to make text and charts bigger or smaller, and
+   flip the **Dark mode** switch for a dark theme. Both sit next to the title, or in the sidebar on other pages.
 
 ## Pages
 - **Portfolio Builder (homepage dashboard):** a control bar for the inputs, four KPI cards, a 2 x 2 grid
@@ -84,6 +85,8 @@ AC420 A1 Introduction to Financial Analytics (Fall 2026, Prof. Peter Wysocki), i
 - Analyst forecasts can come from a backup up to a week or two old when Yahoo refuses live requests
 - The Dark mode switch reloads the page, because Streamlit can't change the theme from Python; your
   inputs come back from a browser cookie that expires after 2 minutes
+- Text size changes the page's root font size, so everything Streamlit sizes in rem grows with it, and
+  charts are scaled in Python; the size resets when you open the app in a new tab
 
 ## Keeping the data fresh
 - Every week or so, and before a demo: run `notebooks/yahoo_backup.ipynb` in Colab and upload the two
@@ -102,7 +105,7 @@ streamlit run streamlit_app.py
 - `pages/`: Risk Deep Dive, Projections & Valuation, Stock Ideas, Data Check
 - `core/`: calculations (`data`, `models`, `scoring`, `projections`, `valuation`, `suggestions`),
   `yahoo.py`, which handles Yahoo lookups that can be refused on Streamlit Cloud, and `theme.py`, the
-  light/dark switch and theme-aware chart colors
+  light/dark switch, text size control and theme-aware chart colors
 - `data/`: small CSV files the app reads (see `data/README.md`)
 - `notebooks/`: offline training (`training_wrds`), known-answer tests, calibration and the Yahoo backup
 

@@ -108,7 +108,7 @@ else:
     fig.add_hline(y=0, line_color="#9ca3af")
     fig.update_layout(height=420, margin=dict(l=10, r=10, t=10, b=10), yaxis_tickformat=".0%",
                       legend=dict(orientation="h", y=-0.25, x=0, title_text=""))
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(theme.scaled(fig), width="stretch", config={"displayModeBar": False})
     st.caption("Up and to the left: lower market risk and more fair-value upside. Upside is the middle of each "
                "stock's DCF to comps range vs. today's price (base case); values above 150% are drawn at the top "
                "edge. Stars mark stocks you already own.")

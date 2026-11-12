@@ -73,7 +73,7 @@ st.caption("std is each stock's monthly volatility, one of the risk score's inpu
 # 5. Boxplot and extreme months (1.5 x IQR rule)
 st.subheader("5. Boxplot of monthly returns")
 style = "dark_background" if theme.is_dark() else "default"   # matplotlib draws an image, so match the theme
-with plt.style.context(style):
+with plt.style.context(style), plt.rc_context({"font.size": 10 * theme.scale()}):   # follows the text size
     fig, ax = plt.subplots(figsize=(7, 4))
     fig.patch.set_alpha(0)        # see-through background blends into the page in light or dark mode
     ax.set_facecolor("none")
